@@ -1,0 +1,502 @@
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  scrollbar-gutter: stable;
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+#app {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.vanilla:hover {
+  filter: drop-shadow(0 0 2em #f7df1eaa);
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+
+
+/* Стили */
+.monday-dialog {
+  position: fixed;
+  right: 850px;
+  bottom: 80px;
+  width: 370px;
+  height: 600px;
+  box-shadow: 0 0 5px 0 rgba(34, 60, 80, .2);
+  border-radius: 15px;
+  overflow: hidden;
+  padding-bottom: 130px;
+}
+
+.dialog-top {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  background: linear-gradient(145deg, #282FDC 0%, #02C8FF 100%);
+  overflow: hidden;
+}
+
+.dialog-middle {
+  width: 100%;
+  height: calc(100% - 150px);
+  margin: 5px 0;
+  overflow: auto;
+}
+
+.dialog-middle-w {
+  width: calc(100% - 30px);
+  min-height: 100%;
+  margin: 0 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.dialog-bottom {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 110px;
+  margin: 0 0 20px 0;
+  background-color: #fff;
+}
+
+.dialog-bottom form {
+    border-top: 2px solid #E8EBEF;
+    width: calc(100% - 20px);
+    margin: 0 10px;
+
+  display: block;
+
+}
+
+.dialog-top__up {
+  display: flex;
+  align-items: center;
+  height: 70px;
+  padding: 15px 25px 15px 20px;
+  box-shadow: 0 0 12px 0 rgba(34, 60, 80, .2);
+}
+
+.manager-icon {
+  display: block;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.manager-info {
+  width: calc(100% - 80px);
+  padding-left: 15px;
+  padding-right: 15px;
+  position: relative;
+}
+
+.options-select {
+  position: absolute;
+  right: 10px;
+  top: 20px;
+  display: block;
+  width: 50px;
+  height: 40px;
+  background-position: 30px 5px;
+  background-size: 5px;
+  background-repeat: no-repeat;
+  background-image: url('../assets/images/menu_14988291.png');
+  cursor: pointer;
+  z-index: 1;
+}
+
+.options-select:hover .message-bubble {
+  display: block;
+}
+
+.options-list {
+      list-style-type: none;
+}
+
+.options-list-item {
+  padding: 0 20px;
+  padding-bottom: 10px;
+}
+
+.options-list-item:last-child {
+  padding-bottom: 0;
+}
+
+.options-list-link {
+  color: #000;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: normal;
+  text-decoration: none;
+}
+
+/* Облако*/
+
+.message-bubble {
+  display: none;
+  position: absolute;
+  width: 250px;
+  right: -2px;
+  top: 38px;
+  background: white;
+  padding: 20px 10px;
+  border-radius: 10px;
+  box-shadow: 0 0 12px 0 rgba(34, 60, 80, .2);
+  z-index: 2;
+}
+
+.message-bubble::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid white;
+  
+  box-shadow: none;
+  border-top: none;
+}
+
+/* Облако, конец */
+
+.manager-job {
+  font-size: 16px;
+  line-height: 20px;
+  color: #fff;
+}
+
+.manager-name {
+  font-size: 20px;
+  line-height: 22px;
+  color: #fff
+}
+
+.dialog-top__down {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 10px 25px 15px 20px;
+}
+
+.online-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  line-height: 20px;
+  color: #fff;
+  padding-left: 20px;
+}
+
+.online-status:before {
+  display: block;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  margin: auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.online-status.on:before {
+  background-color: #43A72D;
+}
+
+.online-status.off:before {
+  background-color: red;
+}
+
+.enter-text {
+  display: flex;
+  align-items: center;
+  padding: 15px 0 0 0;
+}
+
+.enter-dop {
+  display: flex;
+  align-items: center;
+  padding: 15px 0 0 0;
+
+}
+
+.dialog-smiles {
+  display: block;
+  width: 30px;
+  height: 30px;
+  background-position: center;
+  background-size: 25px;
+  background-repeat: no-repeat;
+  background-image: url('../assets/images/smile_6518071.png');
+  cursor: pointer;
+  margin-right: 20px;
+}
+
+.dialog-file {
+  display: block;
+  width: 30px;
+  height: 30px;
+  background-position: center;
+  background-size: 23px;
+  background-repeat: no-repeat;
+  background-image: url('../assets/images/clip_10408766.png');
+  cursor: pointer;
+}
+
+.dialog-robot {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 30px;
+  background-position: center;
+  background-size: 25px;
+  background-repeat: no-repeat;
+  background-image: url('../assets/images/chat-bot_9621133.png');
+  cursor: pointer;
+  margin-right: 35px;
+}
+
+.dialog-robot:after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  display: block;
+  width: 1px;
+  height: 26px;
+  background-color: #E2E5E9;
+}
+
+.input-text {
+  width: calc(100% - 60px);
+  height: 50px;
+  outline: 0!important;
+  border: 0;
+  font-size: 15px;
+  line-height: 15px;
+  padding: 0 10px;
+  margin-right: 10px;
+  font-style: italic;
+  border-radius: 20px;
+  box-shadow: 0 0 12px 0 rgba(34, 60, 80, .2);
+  transition: .2s box-shadow;
+}
+
+.input-text:focus {
+  box-shadow: 0 0 12px 0 rgba(24,111,235, .5);
+  transition: .2s box-shadow;
+}
+
+.message-send {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #006CF0;
+  background-image: url('./assets/images/876777.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 25px;
+  outline: 0!important;
+  border: 0;
+  transition: .2s background-color;
+}
+
+.message-send:hover {
+  background-color: #09ADF9;
+  transition: .2s background-color;
+}
+
+svg {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  height: 40px;
+}
+
+.d-speech {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.d-question {
+ justify-content: flex-start;
+}
+
+.d-answer {
+     justify-content: flex-end;
+}
+
+.d-speech-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.d-speech-text {
+  max-width: calc(100% - 60px);
+  padding: 5px 10px;
+  font-size: 14px;
+  line-height: 18px;
+  text-align: left;
+  border-radius: 10px;
+  box-shadow: 0 0 12px 0 rgba(34, 60, 80, .3);
+}
+.d-question .d-speech-text {
+  margin-left: 10px;
+}
+
+.d-answer .d-speech-img {
+  order: 2;
+  margin-left: 10px;
+}
+.d-answer .d-speech-text {
+  order: 1;
+}
+
+
+/* Стилизация всей полосы прокрутки */
+.dialog-middle {
+  /* Для Firefox (краткая запись) */
+  scrollbar-width: thin; /* thin | auto */
+  scrollbar-color: #186FEB #f0f0f0; /* цвет бегунка цвет трека */
+}
+
+/* WebKit (Chrome, Safari, Edge, Opera) */
+.dialog-middle::-webkit-scrollbar {
+  width: 8px;  /* ширина для вертикального скролла */
+  height: 8px; /* высота для горизонтального скролла */
+}
+
+.dialog-middle::-webkit-scrollbar-track {
+  background: #f0f0f0; /* цвет фона (трека) */
+  border-radius: 4px;
+}
+
+.dialog-middle::-webkit-scrollbar-thumb {
+  background: #186FEB; /* цвет бегунка */
+  border-radius: 4px;
+}
+
+.dialog-middle::-webkit-scrollbar-thumb:hover {
+  background: #1358c0; /* чуть темнее при наведении (опционально) */
+}
+
+/* Убираем все тени и лишние эффекты */
+.dialog-middle::-webkit-scrollbar-track,
+.dialog-middle::-webkit-scrollbar-thumb,
+.dialog-middle::-webkit-scrollbar-corner {
+  box-shadow: none;
+  border: none;
+}
