@@ -447,7 +447,7 @@ svg {
 .d-speech-text {
   max-width: calc(100% - 60px);
   padding: 5px 10px;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 18px;
   text-align: left;
   border-radius: 10px;
@@ -463,6 +463,73 @@ svg {
 }
 .d-answer .d-speech-text {
   order: 1;
+}
+
+.smiles {
+
+}
+
+/* Облако*/
+
+.smiles {
+  display: inline-flex;
+  align-items: center;
+  position: absolute;
+  right: 50px;
+  top: 25px;
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 0 12px 0 rgba(34, 60, 80, .4);
+  z-index: 2;
+}
+
+.smiles::before {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 10px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid white;
+    box-shadow: none;
+    border-bottom: none;
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.2));
+}
+
+.smiles::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 10px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid white;
+    border-bottom: none;
+    z-index: 3;
+}
+
+/* Облако, конец */
+
+.smile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-right: 10px;
+    font-size: 24px;
+    line-height: 24px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.smile:last-child {
+  margin-right: 0
 }
 
 
