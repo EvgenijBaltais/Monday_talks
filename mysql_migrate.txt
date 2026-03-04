@@ -1,0 +1,40 @@
+-- Таблица пользователей чата
+CREATE TABLE chat_users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    chat_identifier VARCHAR(191) UNIQUE, -- Уменьшено с 255 до 191 для UTF8mb4
+    name VARCHAR(100),
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_last_activity (last_activity),
+    INDEX idx_name (name) -- Добавим индекс на имя для поиска
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Таблица сообщений
+CREATE TABLE chat_messages (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    admin_id INT NULL,
+    message TEXT,
+    message_type ENUM('text', 'file', 'system') DEFAULT 'text',
+    file_path VARCHAR(500) NULL,
+    direction ENUM('user_to_admin', 'admin_to_user') NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES chat_users(id) ON DELETE CASCADE,
+    INDEX idx_user_created (user_id, created_at), -- Составной индекс работает
+    INDEX idx_created (created_at)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Таблица для админов
+CREATE TABLE admins (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE,
+    password_hash VARCHAR(255),
+    name VARCHAR(100),
+    email VARCHAR(191) UNIQUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
