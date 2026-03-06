@@ -6,33 +6,21 @@ COLLATE utf8mb4_unicode_ci;
 -- Выбираем базу данных для работы
 USE monday_talks;
 
--- Таблица пользователей чата
-CREATE TABLE IF NOT EXISTS chat_users (
+-- Таблица сообщений (обновленная структура)
+CREATE TABLE IF NOT EXISTS chat_messages (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    chat_identifier VARCHAR(191) UNIQUE,
-    name VARCHAR(100),
+    admin TINYINT DEFAULT 0 COMMENT '1 - сообщение от админа, 0 - сообщение от клиента',
+    message TEXT,
+    file_path VARCHAR(500) NULL,
+    direction TINYINT NOT NULL COMMENT '1 - сообщение от клиента, 2 - ответ менеджера',
+    is_read BOOLEAN DEFAULT FALSE,
+    fingerprint VARCHAR(64),
     ip_address VARCHAR(45),
     user_agent TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_last_activity (last_activity),
-    INDEX idx_name (name)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- Таблица сообщений
-CREATE TABLE IF NOT EXISTS chat_messages (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT,
-    admin_id INT NULL,
-    message TEXT,
-    message_type ENUM('text', 'file', 'system') DEFAULT 'text',
-    file_path VARCHAR(500) NULL,
-    direction ENUM('user_to_admin', 'admin_to_user') NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES chat_users(id) ON DELETE CASCADE,
-    INDEX idx_user_created (user_id, created_at),
-    INDEX idx_created (created_at)
+    INDEX idx_fingerprint (fingerprint),
+    INDEX idx_created (created_at),
+    INDEX idx_direction (direction)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Таблица для админов
