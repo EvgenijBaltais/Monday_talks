@@ -14,6 +14,10 @@ export default defineConfig({
       '/poll_messages.php': {
         target: 'http://mondaytalks',
         changeOrigin: true,
+      },
+      '/start_dialog.php': {
+        target: 'http://mondaytalks',
+        changeOrigin: true,
       }
     }
   }

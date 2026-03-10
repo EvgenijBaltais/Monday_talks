@@ -275,6 +275,7 @@ button:focus-visible {
 .dialog-top__down {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   position: relative;
   padding: 10px 25px 15px 20px;
 }
@@ -308,6 +309,18 @@ button:focus-visible {
 
 .online-status.off:before {
   background-color: red;
+}
+
+.finish-dialog {
+  height: 26px;
+  border-radius: 5px;
+  background-color: #0EBC79;
+  padding: 0 7px;
+  font-size: 16px;
+  line-height: 26px;
+  color: #fff;
+  cursor: pointer;
+  z-index: 5;
 }
 
 .enter-text {

@@ -4,25 +4,84 @@ require_once 'config.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Cache-Control: no-cache, must-revalidate');
 
-// Только GET запросы
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed']);
+// Включаем отображение ошибок для отладки (уберите на продакшене)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Функция для логирования ошибок
+function debug_log($message) {
+    $logFile = __DIR__ . '/poll_debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
+}
+
+debug_log("=== Начало запроса ===");
+
+// Обработка preflight запроса OPTIONS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    debug_log("OPTIONS запрос");
+    http_response_code(200);
     exit;
 }
 
-// Получаем параметры из URL
-$userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
-$lastId = isset($_GET['last_id']) ? (int)$_GET['last_id'] : 0;
+// Только POST запросы
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    debug_log("Неверный метод: " . $_SERVER['REQUEST_METHOD']);
+    http_response_code(405);
+    echo json_encode(['error' => 'Method not allowed. Use POST']);
+    exit;
+}
+
+// Получаем JSON из тела запроса
+$rawInput = file_get_contents('php://input');
+debug_log("Raw input: " . $rawInput);
+
+$input = json_decode($rawInput, true);
+
+if (!$input) {
+    debug_log("Invalid JSON: " . json_last_error_msg());
+    http_response_code(400);
+    echo json_encode([
+        'error' => 'Invalid JSON data',
+        'details' => json_last_error_msg()
+    ]);
+    exit;
+}
+
+debug_log("Parsed input: " . print_r($input, true));
+
+// Получаем параметры из JSON
+$fingerprint = isset($input['user_id']) ? $input['user_id'] : '';
+$lastId = isset($input['last_id']) ? (int)$input['last_id'] : 0;
+
+debug_log("Fingerprint: $fingerprint, Last ID: $lastId");
 
 // Валидация
-if (!$userId) {
+if (empty($fingerprint)) {
+    debug_log("Missing user_id");
     http_response_code(400);
     echo json_encode(['error' => 'User ID is required']);
+    exit;
+}
+
+try {
+    $pdo = getDB();
+    if (!$pdo) {
+        throw new Exception("Database connection failed");
+    }
+    debug_log("Database connected successfully");
+    
+} catch (Exception $e) {
+    debug_log("Database error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'error' => 'Database connection failed',
+        'details' => $e->getMessage()
+    ]);
     exit;
 }
 
@@ -30,42 +89,39 @@ if (!$userId) {
 $timeout = 25;
 $startTime = time();
 
-$pdo = getDB();
-
 // Long polling цикл
 while (time() - $startTime < $timeout) {
     try {
-        // Получаем новые сообщения для пользователя
-        // Используем индекс idx_user_created для быстрого поиска
+        debug_log("Checking messages for fingerprint: $fingerprint, last_id: $lastId");
+        
+        // Исправленный запрос в соответствии со структурой таблицы
         $stmt = $pdo->prepare("
             SELECT 
-                cm.id,
-                cm.user_id,
-                cm.admin_id,
-                cm.message,
-                cm.message_type,
-                cm.direction,
-                cm.is_read,
-                cm.created_at,
-                DATE_FORMAT(cm.created_at, '%Y-%m-%d %H:%i:%s') as formatted_date,
-                UNIX_TIMESTAMP(cm.created_at) as timestamp,
-                cu.name as user_name,
-                a.name as admin_name
-            FROM chat_messages cm
-            INNER JOIN chat_users cu ON cm.user_id = cu.id
-            LEFT JOIN admins a ON cm.admin_id = a.id
-            WHERE cm.user_id = ? AND cm.id > ?
-            ORDER BY cm.created_at ASC
+                id,
+                message,
+                direction,
+                is_read,
+                created_at,
+                DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as formatted_date,
+                UNIX_TIMESTAMP(created_at) as timestamp,
+                fingerprint
+            FROM chat_messages 
+            WHERE fingerprint = ? AND id > ?
+            ORDER BY created_at ASC
         ");
         
-        $stmt->execute([$userId, $lastId]);
+        $stmt->execute([$fingerprint, $lastId]);
         $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        debug_log("Found " . count($messages) . " messages");
         
         // Если есть новые сообщения
         if (!empty($messages)) {
-            // Отмечаем сообщения от админа как прочитанные
+            debug_log("New messages: " . print_r($messages, true));
+            
+            // Отмечаем сообщения от админа как прочитанные (direction = 2)
             $adminMessages = array_filter($messages, function($msg) {
-                return $msg['direction'] === 'admin_to_user' && !$msg['is_read'];
+                return $msg['direction'] == 2 && !$msg['is_read'];
             });
             
             if (!empty($adminMessages)) {
@@ -78,6 +134,7 @@ while (time() - $startTime < $timeout) {
                     WHERE id IN ($placeholders)
                 ");
                 $updateStmt->execute($ids);
+                debug_log("Marked as read: " . implode(", ", $ids));
             }
             
             // Форматируем ответ
@@ -86,36 +143,32 @@ while (time() - $startTime < $timeout) {
                 'messages' => array_map(function($msg) {
                     return [
                         'id' => (int)$msg['id'],
-                        'user_id' => (int)$msg['user_id'],
-                        'admin_id' => $msg['admin_id'] ? (int)$msg['admin_id'] : null,
                         'message' => $msg['message'],
-                        'message_type' => $msg['message_type'],
-                        'direction' => $msg['direction'],
+                        'direction' => (int)$msg['direction'], // 1 - клиент, 2 - админ
                         'is_read' => (bool)$msg['is_read'],
                         'created_at' => $msg['created_at'],
                         'formatted_date' => $msg['formatted_date'],
                         'timestamp' => (int)$msg['timestamp'],
-                        'sender_name' => $msg['direction'] === 'user_to_admin' 
-                            ? $msg['user_name'] 
-                            : ($msg['admin_name'] ?? 'Admin'),
-                        'sender_type' => $msg['direction'] === 'user_to_admin' ? 'user' : 'admin'
+                        'sender_type' => $msg['direction'] == 2 ? 'admin' : 'user'
                     ];
                 }, $messages),
                 'last_id' => (int)end($messages)['id'],
                 'count' => count($messages)
             ];
             
+            debug_log("Sending response with " . count($messages) . " messages");
             echo json_encode($response);
             exit;
         }
         
     } catch (PDOException $e) {
-        // Логируем ошибку, но продолжаем polling
-        error_log("Polling error: " . $e->getMessage());
+        debug_log("PDO Error: " . $e->getMessage());
+        // Не выходим из цикла, продолжаем polling
     }
     
     // Проверяем, не закрыл ли клиент соединение
     if (connection_aborted()) {
+        debug_log("Connection aborted by client");
         exit;
     }
     
@@ -124,6 +177,7 @@ while (time() - $startTime < $timeout) {
 }
 
 // Таймаут - нет новых сообщений
+debug_log("Timeout, no new messages");
 echo json_encode([
     'success' => true,
     'messages' => [],

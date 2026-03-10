@@ -10,52 +10,113 @@ import '../assets/css/style.css'
         client_photo: 'femalemanager.jpg',
         text: '',
         step: 0,
-        lastMessageId: 0,
         pollingActive: true,
         name_get_status: 'Готово',
         user_id: 0,
+        dialog_id: 0,
         chat_identifier: 0,
+        longPollingActive: 0,
 
         chat_start_phrases: [
             { manager: 'Привет! Добро пожаловать!' },
             { manager: 'Чем могу помочь?' }
         ],
 
+        // Единый метод для отправки сообщения
+        handleMessageSubmit(inputElement) {
+            const messageText = inputElement.value.trim();
+            
+            if (messageText === '') return false;
+            
+            // Добавляем сообщение в чат
+            document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(messageText));
+            
+            // Скроллим вниз
+            document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
+            
+            // Очищаем поле ввода
+            inputElement.value = '';
+
+            
+            this.sendMessage(messageText, this.dialog_id)
+                .then(data => {
+                    if (data && data.success) {
+                        console.log('Сообщение отправлено:', messageText);
+                    } else {
+                        console.error('Ошибка отправки:', data?.error || 'Неизвестная ошибка');
+                    }
+
+                    if (!this.longPollingActive) {
+                        this.longPollingActive += 1
+
+                        this.startLongPolling()
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при отправке:', error);
+                });
+
+            
+            return true;
+        },
+
+        async startDialog () {
+
+            this.dialog_id = this.getCookie('dialog_id') || 0
+
+            const dialog_id = this.dialog_id
+            const fingerprint = this.user_id
+
+            console.log(dialog_id, fingerprint)
+
+            try {
+                const response = await fetch ('start_dialog.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ dialog_id, fingerprint })
+                }) 
+
+                const data = await response.json()
+                return data;
+            } catch (error) {
+                console.error('Start Dialog error:', error);
+            }
+        },
+
         attachEvents() {
-
             document.addEventListener('click', e => {
-
                 // Отмена всего лишнего по клику вне
-                if (!e.target.classList.contains('dialog-smiles') && !e.target.classList.contains('smile') && !e.target.classList.contains('smiles')) {
-                    if (document.querySelector('.smiles')) {
-                        document.querySelector('.smiles').remove()
+                if (!e.target.classList.contains('dialog-smiles') && 
+                    !e.target.classList.contains('smile') && 
+                    !e.target.classList.contains('smiles')) {
+                    const smilesPanel = document.querySelector('.smiles');
+                    if (smilesPanel) {
+                        smilesPanel.remove();
                     }
                 }
 
-                // Вставка текста
+                // Обработка клика по кнопке отправки
                 if (e.target.classList.contains('message-send')) {
+                    e.preventDefault();
 
-                    this.text = e.target.parentElement.querySelector('.input-text').value
+                    const enterTextParent = e.target.closest('.enter-text');
+                    const inputElement = enterTextParent ? enterTextParent.querySelector('.input-text') : null;
 
-                    if (this.text != '') {
-
-                        document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(this.text))
-
-                        document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
-                        e.target.parentElement.querySelector('.input-text').value = ''
-
-                        // Отправляем сообщение
-                        this.sendMessage(this.text).then(data => {
-                            if (data && data.success) {
-                                console.log('Сообщение отправлено: ' + this.text)
-                            }
-                        })
+                    if (inputElement) {
+                        this.handleMessageSubmit(inputElement);
                     }
                 }
 
                 // Смайлы, появление выбора
                 if (e.target.classList.contains('dialog-smiles')) {
-
+                    // Удаляем существующую панель, если есть
+                    const existingSmiles = document.querySelector('.smiles');
+                    if (existingSmiles) {
+                        existingSmiles.remove();
+                    }
+                    
                     let smiles = `
                         <div class="smiles">
                             <i class="smile">😀</i>
@@ -65,91 +126,87 @@ import '../assets/css/style.css'
                             <i class="smile">😡</i>
                             <i class="smile">🤡</i>
                         </div>
-                    `
-                    e.target.insertAdjacentHTML('beforeend', smiles)
+                    `;
+                    e.target.insertAdjacentHTML('beforeend', smiles);
                 }
 
                 // Смайлы, выбор
                 if (e.target.classList.contains('smile')) {
-
-                    this.text = document.querySelector('.input-text').value + e.target.innerText
-                    document.querySelector('.input-text').value = this.text
-
-                    e.target.parentElement.remove()
+                    const inputElement = document.querySelector('.input-text');
+                    if (inputElement) {
+                        inputElement.value += e.target.innerText;
+                        inputElement.focus();
+                        e.target.parentElement.remove();
+                    }
                 }
-            })
+            });
 
-            // Отправка сообщения по enter
-            document.querySelector('.dialog-form').addEventListener('submit', e => {
+            // Обработка отправки формы по Enter
+            const form = document.querySelector('.dialog-form');
+            if (form) {
+                form.addEventListener('submit', e => {
+                    e.preventDefault();
+                    
+                    const inputElement = form.querySelector('.input-text');
+                    if (inputElement) {
+                        this.handleMessageSubmit(inputElement);
+                    }
+                });
+            }
 
-                e.preventDefault();
-
-                this.text = e.target.querySelector('.input-text').value
-
-                if (this.text != '') {
-
-                    document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(this.text))
-
-                    document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
-                    e.target.querySelector('.input-text').value = ''
-                }
-            })
-        },
-
-        async register(name, email) {
-            try {
-                const response = await fetch('/register_user.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name, email })
-                })
-
-                const data = await response.json()
-                return data
-            } catch (error) {
-                console.error('Registration error:', error)
+            // Дополнительная обработка нажатия Enter в самом поле ввода (на всякий случай)
+            const inputElement = document.querySelector('.input-text');
+            if (inputElement) {
+                inputElement.addEventListener('keypress', e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        const form = e.target.closest('.dialog-form');
+                        if (form) {
+                            form.dispatchEvent(new Event('submit', { cancelable: true }));
+                        }
+                    }
+                });
             }
         },
 
         // Метод для инициализации user_id
         async initUserId() {
             // Проверяем куки
-            let userId = this.getCookie('user_id')
+            let userId = this.getCookie('user_id');
             
             if (userId) {
                 // Если нашли в куки - используем
-                this.user_id = userId
-                console.log('Загружен user_id из куки:', userId)
-                return userId
-            } else {
-                // Если нет - генерируем новый
-                try {
-                    userId = await this.getFingerPrint()
-                    this.user_id = userId
-                    // Сохраняем в куки на 365 дней
-                    this.setCookie('user_id', userId, 365)
-                    console.log('Сгенерирован новый user_id:', userId)
-                    return userId
-                } catch (error) {
-                    console.error('Ошибка генерации fingerprint:', error)
-                    // В случае ошибки генерируем простой ID
-                    userId = 'guest_' + Math.random().toString(36).substr(2, 9)
-                    this.user_id = userId
-                    this.setCookie('user_id', userId, 365)
-                    return userId
-                }
+                this.user_id = userId;
+                console.log('Загружен user_id из куки:', userId);
+                return userId;
             }
+
+            // Если нет - генерируем новый
+            try {
+                userId = await this.getFingerPrint();
+                this.user_id = userId;
+                // Сохраняем в куки на 365 дней
+                this.setCookie('user_id', userId, 365);
+                console.log('Сгенерирован новый user_id:', userId);
+                return userId;
+            } catch (error) {
+                console.error('Ошибка генерации fingerprint:', error);
+                // В случае ошибки генерируем простой ID
+                userId = 'guest_' + Math.random().toString(36).substr(2, 9);
+                this.user_id = userId;
+                this.setCookie('user_id', userId, 365);
+                return userId;
+            }
+
         },
 
-        async sendMessage(message, isAdmin = false) {
+        async sendMessage(message, dialog_id, isAdmin = false) {
             try {
                 // Используем сохраненный user_id
-                const fingerprint = this.user_id
+                const fingerprint = this.user_id;
                 
                 // Определяем direction: 1 - от клиента, 2 - от менеджера
-                const direction = isAdmin ? 2 : 1
+                const direction = isAdmin ? 2 : 1;
                 
                 const response = await fetch('/send_message.php', {
                     method: 'POST',
@@ -157,18 +214,19 @@ import '../assets/css/style.css'
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        fingerprint: fingerprint,
-                        message: message,
-                        direction: direction,
+                        fingerprint,
+                        message,
+                        dialog_id,
+                        direction,
                         admin: isAdmin ? 1 : 0
                     })
-                })
+                });
 
-                const data = await response.json()
-                return data
+                const data = await response.json();
+                return data;
             } catch (error) {
-                console.error('Send error:', error)
-                return { success: false, error: error.message }
+                console.error('Send error:', error);
+                return { success: false, error: error.message };
             }
         },
 
@@ -182,69 +240,91 @@ import '../assets/css/style.css'
                 navigator.hardwareConcurrency || 'unknown',
                 screen.pixelDepth || screen.colorDepth,
                 navigator.platform || 'unknown'
-            ]
+            ];
             
-            const text = components.join('|||')
-            return await this.sha256(text)
+            const text = components.join('|||');
+            return await this.sha256(text);
         },
 
         async sha256(str) {
             try {
-                const buffer = new TextEncoder().encode(str)
-                const hash = await crypto.subtle.digest('SHA-256', buffer)
+                const buffer = new TextEncoder().encode(str);
+                const hash = await crypto.subtle.digest('SHA-256', buffer);
                 return Array.from(new Uint8Array(hash))
                     .map(b => b.toString(16).padStart(2, '0'))
-                    .join('')
+                    .join('');
             } catch (error) {
-                console.error('SHA-256 error:', error)
+                console.error('SHA-256 error:', error);
                 // Fallback на простой хеш
-                return this.simpleHash(str)
+                return this.simpleHash(str);
             }
         },
 
         // Простой хеш для fallback
         simpleHash(str) {
-            let hash = 0
+            let hash = 0;
             for (let i = 0; i < str.length; i++) {
-                const char = str.charCodeAt(i)
-                hash = ((hash << 5) - hash) + char
-                hash = hash & hash
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
             }
             return Math.abs(hash).toString(16).padStart(8, '0') +
-                   Math.abs(hash * 2).toString(16).padStart(8, '0')
+                   Math.abs(hash * 2).toString(16).padStart(8, '0');
         },
 
         startLongPolling() {
-            let lastMessageId = 0
+            let lastMessageId = 0;
+
+            console.log('go')
 
             const poll = () => {
-                if (!this.pollingActive) return
+                if (!this.pollingActive) return;
                 
-                fetch(`/poll_messages.php?user_id=${this.user_id}&last_id=${lastMessageId}`)
-                    .then(response => response.json())
+                fetch('/poll_messages.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: this.user_id,
+                        last_id: lastMessageId
+                    })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.messages && data.messages.length > 0) {
-                            console.log('Новые сообщения:', data.messages)
+                            console.log('Новые сообщения:', data.messages);
 
                             data.messages.forEach(item => {
                                 // Проверяем, что сообщение от админа (direction = 2)
                                 if (item.direction == 2) {
-                                    document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(item.message))
-                                    document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight
+                                    document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(item.message));
                                 }
-                            })
+                            });
 
-                            lastMessageId = data.messages[data.messages.length - 1].id
+                            // Скроллим вниз после добавления всех сообщений
+                            document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
+
+                            lastMessageId = data.messages[data.messages.length - 1].id;
                         }
-                        if (this.pollingActive) poll()
+                        if (this.pollingActive) poll();
                     })
                     .catch(error => {
-                        console.error('Polling error:', error)
-                        if (this.pollingActive) setTimeout(poll, 5000)
-                    })
-            }
+                        console.error('Polling error:', error);
+                        if (this.pollingActive) setTimeout(poll, 5000);
+                    });
+            };
 
-            poll()
+            poll();
+
+            window.addEventListener('beforeunload', () => {
+                this.pollingActive = false;
+            });
         },
 
         renderChat() {
@@ -277,6 +357,7 @@ import '../assets/css/style.css'
                     </div>
                     <div class="dialog-top__down">
                         <div class="online-status on">Мы онлайн</div>
+                        <div class="finish-dialog">Завершить диалог</div>
                     </div>
                     <svg viewBox="0 0 1440 40" preserveAspectRatio="none">
                         <path d="M0,20 C200,45 400,-5 600,20 C800,40 1000,10 1440,20 L1440,40 L0,40 Z" fill="#fff"/>
@@ -286,8 +367,8 @@ import '../assets/css/style.css'
                     <div class="dialog-middle-w">
                         ${this.chat_start_phrases.map(item => {
                             return Object.keys(item).map(key => {
-                                return key === 'manager' ? this.managerSpeech(item[key]) : this.clientSpeech(item[key])
-                            }).join('')
+                                return key === 'manager' ? this.managerSpeech(item[key]) : this.clientSpeech(item[key]);
+                            }).join('');
                         }).join('')}
                     </div>
                 </div>
@@ -304,69 +385,72 @@ import '../assets/css/style.css'
                         </div>
                     </form>
                 </div>
-            </div>`
+            </div>`;
         },
 
         managerSpeech(phrase) {
             return `<div class="d-speech d-question">
                 <div class="d-speech-img" style="background-image: url('./assets/images/${this.managers_photo}');"></div>
                 <div class="d-speech-text">${phrase}</div>
-            </div>`
+            </div>`;
         },
 
         clientSpeech(phrase) {
             return `<div class="d-speech d-answer">
                 <div class="d-speech-img" style="background-image: url('./assets/images/${this.client_photo}');"></div>
                 <div class="d-speech-text">${phrase}</div>
-            </div>`
+            </div>`;
         },
 
         authorisedAnswer(name) {
-            return this.managerSpeech(`Очень приятно ${name}! Сейчас я изучу ваш вопрос и позову менеджера. Он ответит на него!`)
+            return this.managerSpeech(`Очень приятно ${name}! Сейчас я изучу ваш вопрос и позову менеджера. Он ответит на него!`);
         },
 
         setCookie(name, value, days) {
-            const seconds = days * 24 * 60 * 60
-            document.cookie = `${name}=${value}; path=/; max-age=${seconds}`
+            const seconds = days * 24 * 60 * 60;
+            document.cookie = `${name}=${value}; path=/; max-age=${seconds}`;
         },
 
         getCookie(name) {
             const value = document.cookie
                 .split('; ')
                 .find(row => row.startsWith(name + '='))
-                ?.split('=')[1]
+                ?.split('=')[1];
             
-            return value || null
+            return value || null;
         },
 
         async init() {
             try {
                 // Инициализируем user_id
-                await this.initUserId()
-                
-                console.log('Чат инициализирован с user_id:', this.user_id)
 
+                await this.initUserId()
+
+                // Проверяем наличие диалога
+                await this.startDialog()
+                
                 if (!document.getElementById('app')) {
-                    console.error('Элемент #app не найден')
-                    return false
+                    console.error('Элемент #app не найден');
+                    return false;
                 }
 
+                // Проверка существования диалога
+                
+                this.dialog_id = this.getCookie('dialog_id') || 0
+
                 // Рендерим чат
-                document.querySelector('#app').innerHTML = this.renderChat()
+                document.querySelector('#app').innerHTML = this.renderChat();
                 
                 // Вешаем события
-                this.attachEvents()
-                
-                // Запускаем long polling
-                this.startLongPolling()
+                this.attachEvents();
                 
             } catch (error) {
-                console.error('Ошибка инициализации чата:', error)
+                console.error('Ошибка инициализации чата:', error);
             }
         }
-    }
+    };
 
     // Запускаем инициализацию
-    Monday_talks_chat.init()
+    Monday_talks_chat.init();
 
-})()
+})();

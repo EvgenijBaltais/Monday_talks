@@ -6,21 +6,34 @@ COLLATE utf8mb4_unicode_ci;
 -- Выбираем базу данных для работы
 USE monday_talks;
 
--- Таблица сообщений (обновленная структура)
+-- Таблица диалогов
+CREATE TABLE IF NOT EXISTS dialogs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    fingerprint VARCHAR(64) NOT NULL COMMENT 'Уникальный идентификатор пользователя',
+    status ENUM('open', 'closed') DEFAULT 'open' COMMENT 'статус диалога: open - открыт, closed - закрыт',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'дата создания диалога',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'время обновления',
+    INDEX idx_fingerprint (fingerprint),
+    INDEX idx_status (status)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Таблица сообщений (обновленная структура с dialog_id)
 CREATE TABLE IF NOT EXISTS chat_messages (
     id INT PRIMARY KEY AUTO_INCREMENT,
+    dialog_id INT NOT NULL COMMENT 'ID диалога из таблицы dialogs',
     admin TINYINT DEFAULT 0 COMMENT '1 - сообщение от админа, 0 - сообщение от клиента',
     message TEXT,
     file_path VARCHAR(500) NULL,
     direction TINYINT NOT NULL COMMENT '1 - сообщение от клиента, 2 - ответ менеджера',
     is_read BOOLEAN DEFAULT FALSE,
-    fingerprint VARCHAR(64),
+    fingerprint VARCHAR(64) NOT NULL COMMENT 'Уникальный идентификатор пользователя',
     ip_address VARCHAR(45),
     user_agent TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_dialog_id (dialog_id),
     INDEX idx_fingerprint (fingerprint),
     INDEX idx_created (created_at),
-    INDEX idx_direction (direction)
+    FOREIGN KEY (dialog_id) REFERENCES dialogs(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Таблица для админов
