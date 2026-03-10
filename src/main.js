@@ -67,8 +67,6 @@ import '../assets/css/style.css'
             const dialog_id = this.dialog_id
             const fingerprint = this.user_id
 
-            console.log(dialog_id, fingerprint)
-
             try {
                 const response = await fetch ('start_dialog.php', {
                     method: 'POST',
@@ -79,7 +77,12 @@ import '../assets/css/style.css'
                 }) 
 
                 const data = await response.json()
-                return data;
+
+                this.dialog_id = data.dialog_id
+                this.setCookie('dialog_id', data.dialog_id, 3);
+
+                console.log(data)
+
             } catch (error) {
                 console.error('Start Dialog error:', error);
             }
@@ -107,6 +110,14 @@ import '../assets/css/style.css'
                     if (inputElement) {
                         this.handleMessageSubmit(inputElement);
                     }
+                }
+
+                // Закрытие сеанса чата
+
+                if (e.target.classList.contains('finish-dialog')) {
+                    e.preventDefault();
+
+                    
                 }
 
                 // Смайлы, появление выбора
@@ -185,8 +196,8 @@ import '../assets/css/style.css'
             try {
                 userId = await this.getFingerPrint();
                 this.user_id = userId;
-                // Сохраняем в куки на 365 дней
-                this.setCookie('user_id', userId, 365);
+                // Сохраняем в куки на 3 дня
+                this.setCookie('user_id', userId, 3);
                 console.log('Сгенерирован новый user_id:', userId);
                 return userId;
             } catch (error) {
@@ -194,7 +205,7 @@ import '../assets/css/style.css'
                 // В случае ошибки генерируем простой ID
                 userId = 'guest_' + Math.random().toString(36).substr(2, 9);
                 this.user_id = userId;
-                this.setCookie('user_id', userId, 365);
+                this.setCookie('user_id', userId, 3);
                 return userId;
             }
 
@@ -223,6 +234,7 @@ import '../assets/css/style.css'
                 });
 
                 const data = await response.json();
+                console.log(data)
                 return data;
             } catch (error) {
                 console.error('Send error:', error);
