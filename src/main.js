@@ -47,7 +47,7 @@ import '../assets/css/style.css'
                     }
 
                     if (!this.pollingActive) {
-                        this.pollingActive += 1
+                        this.pollingActive = true
 
                         this.startLongPolling()
                     }
@@ -192,15 +192,11 @@ import '../assets/css/style.css'
 
                         this.getParent(e.target, 'monday-dialog').querySelectorAll('.d-speech').forEach(item => item.remove())
 
-                        this.chat_start_phrases.slice(0, 2);
-
-                        let img = new Image();
-                        let img_src_index = this.getRandomNumber()
-                            img.src = `/assets/images/end_chat/${img_src_index}.png`;
+                        this.chat_start_phrases = this.chat_start_phrases.slice(0, 2);
 
                         this.getParent(e.target, 'monday-dialog').querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', `
                             <div class = "dialog-end-w">
-                                <img src = "/assets/images/end_chat/${img_src_index}.png" class = "dialog-end-pic">
+                                <img src = "/assets/images/end_chat/${this.getRandomNumber()}.png" class = "dialog-end-pic">
                                 <p class = "dialog-end-p">Диалог завершен.</p>
                                 <button class = "dialog-end-btn">Начать новый диалог</button>
                             </div>
