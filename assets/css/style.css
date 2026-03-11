@@ -137,9 +137,9 @@ button:focus-visible {
 }
 
 .dialog-middle-w {
-  width: calc(100% - 30px);
+  width: calc(100% - 24px);
   min-height: 100%;
-  margin: 0 15px;
+  margin: 0 12px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -156,12 +156,23 @@ button:focus-visible {
 }
 
 .dialog-bottom form {
+    position: relative;
+    display: block;
     border-top: 2px solid #E8EBEF;
     width: calc(100% - 20px);
     margin: 0 10px;
+}
 
-  display: block;
-
+.blocking-dialog {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  background-color: transparent;
 }
 
 .dialog-top__up {
@@ -281,11 +292,12 @@ button:focus-visible {
 }
 
 .online-status {
+  height: 26px;
   position: relative;
   display: flex;
   align-items: center;
   font-size: 16px;
-  line-height: 20px;
+  line-height: 26px;
   color: #fff;
   padding-left: 20px;
 }
@@ -321,6 +333,14 @@ button:focus-visible {
   color: #fff;
   cursor: pointer;
   z-index: 5;
+  border: 0!important;
+  outline: 0!important;
+  transition: .2s background-color;
+}
+
+.finish-dialog:hover {
+  background-color: #43A72D;
+  transition: .2s background-color;
 }
 
 .enter-text {
@@ -478,10 +498,6 @@ svg {
   order: 1;
 }
 
-.smiles {
-
-}
-
 /* Облако*/
 
 .smiles {
@@ -547,36 +563,92 @@ svg {
 
 
 /* Стилизация всей полосы прокрутки */
+/*
 .dialog-middle {
-  /* Для Firefox (краткая запись) */
-  scrollbar-width: thin; /* thin | auto */
-  scrollbar-color: #186FEB #f0f0f0; /* цвет бегунка цвет трека */
+  scrollbar-width: thin;
+  scrollbar-color: #186FEB #f0f0f0;
 }
 
-/* WebKit (Chrome, Safari, Edge, Opera) */
 .dialog-middle::-webkit-scrollbar {
-  width: 8px;  /* ширина для вертикального скролла */
-  height: 8px; /* высота для горизонтального скролла */
+  width: 8px;
+  height: 8px;
 }
 
 .dialog-middle::-webkit-scrollbar-track {
-  background: #f0f0f0; /* цвет фона (трека) */
+  background: #f0f0f0;
   border-radius: 4px;
 }
 
 .dialog-middle::-webkit-scrollbar-thumb {
-  background: #186FEB; /* цвет бегунка */
+  background: #186FEB;
   border-radius: 4px;
 }
 
 .dialog-middle::-webkit-scrollbar-thumb:hover {
-  background: #1358c0; /* чуть темнее при наведении (опционально) */
+  background: #1358c0;
 }
 
-/* Убираем все тени и лишние эффекты */
 .dialog-middle::-webkit-scrollbar-track,
 .dialog-middle::-webkit-scrollbar-thumb,
 .dialog-middle::-webkit-scrollbar-corner {
   box-shadow: none;
   border: none;
+}
+*/
+
+/* Скрываем скролл полностью */
+.dialog-middle {
+  /* Для Firefox */
+  scrollbar-width: none; /* none - полностью скрывает скроллбар */
+  
+  /* Для IE и Edge (старые) */
+  -ms-overflow-style: none;
+}
+
+/* Для WebKit (Chrome, Safari, Edge) */
+.dialog-middle::-webkit-scrollbar {
+  width: 0; /* Делаем ширину 0 */
+  height: 0;
+  display: none; /* Дополнительно скрываем */
+  background: transparent; /* Прозрачный фон */
+}
+
+
+.dialog-end-w {
+  display: block;
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.dialog-end-pic {
+  display: block;
+  width: 120px;
+  margin: 0 auto;
+} 
+
+.dialog-end-p {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  font-size: 20px;
+  line-height: 24px;
+}
+
+.dialog-end-btn {
+  height: 34px;
+  border-radius: 5px;
+  background-color: #1C90ED;
+  padding: 0 15px;
+  font-size: 16px;
+  line-height: 34px;
+  color: #fff;
+  cursor: pointer;
+  z-index: 5;
+  transition: .2s background-color;
+  border: 0!important;
+  outline: 0!important;
+}
+
+.dialog-end-btn:hover {
+  background-color: #1C62A6;
+  transition: .2s background-color;
 }

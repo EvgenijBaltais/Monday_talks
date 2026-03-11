@@ -56,15 +56,23 @@ debug_log("Parsed input: " . print_r($input, true));
 
 // Получаем параметры из JSON
 $fingerprint = isset($input['user_id']) ? $input['user_id'] : '';
+$dialog_id = isset($input['dialog_id']) ? (int)$input['dialog_id'] : 0;
 $lastId = isset($input['last_id']) ? (int)$input['last_id'] : 0;
 
-debug_log("Fingerprint: $fingerprint, Last ID: $lastId");
+debug_log("Fingerprint: $fingerprint, Dialog ID: $dialog_id, Last ID: $lastId");
 
 // Валидация
 if (empty($fingerprint)) {
     debug_log("Missing user_id");
     http_response_code(400);
     echo json_encode(['error' => 'User ID is required']);
+    exit;
+}
+
+if ($dialog_id <= 0) {
+    debug_log("Missing or invalid dialog_id");
+    http_response_code(400);
+    echo json_encode(['error' => 'Valid dialog_id is required']);
     exit;
 }
 
@@ -85,6 +93,28 @@ try {
     exit;
 }
 
+// Проверяем, существует ли диалог и принадлежит ли он этому пользователю
+try {
+    $checkStmt = $pdo->prepare("
+        SELECT id FROM dialogs 
+        WHERE id = ? AND fingerprint = ? AND status = 'open'
+    ");
+    $checkStmt->execute([$dialog_id, $fingerprint]);
+    $dialog = $checkStmt->fetch();
+    
+    if (!$dialog) {
+        debug_log("Dialog not found or doesn't belong to user: $dialog_id, $fingerprint");
+        echo json_encode([
+            'success' => false,
+            'error' => 'Dialog not found or access denied',
+            'messages' => []
+        ]);
+        exit;
+    }
+} catch (PDOException $e) {
+    debug_log("Error checking dialog: " . $e->getMessage());
+}
+
 // Максимальное время polling (25 секунд)
 $timeout = 25;
 $startTime = time();
@@ -92,9 +122,9 @@ $startTime = time();
 // Long polling цикл
 while (time() - $startTime < $timeout) {
     try {
-        debug_log("Checking messages for fingerprint: $fingerprint, last_id: $lastId");
+        debug_log("Checking messages for dialog_id: $dialog_id, last_id: $lastId");
         
-        // Исправленный запрос в соответствии со структурой таблицы
+        // ИСПРАВЛЕННЫЙ ЗАПРОС: фильтруем по dialog_id вместо fingerprint
         $stmt = $pdo->prepare("
             SELECT 
                 id,
@@ -104,16 +134,17 @@ while (time() - $startTime < $timeout) {
                 created_at,
                 DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as formatted_date,
                 UNIX_TIMESTAMP(created_at) as timestamp,
-                fingerprint
+                fingerprint,
+                dialog_id
             FROM chat_messages 
-            WHERE fingerprint = ? AND id > ?
+            WHERE dialog_id = ? AND id > ?
             ORDER BY created_at ASC
         ");
         
-        $stmt->execute([$fingerprint, $lastId]);
+        $stmt->execute([$dialog_id, $lastId]);
         $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        debug_log("Found " . count($messages) . " messages");
+        debug_log("Found " . count($messages) . " messages for dialog_id $dialog_id");
         
         // Если есть новые сообщения
         if (!empty($messages)) {
@@ -149,11 +180,13 @@ while (time() - $startTime < $timeout) {
                         'created_at' => $msg['created_at'],
                         'formatted_date' => $msg['formatted_date'],
                         'timestamp' => (int)$msg['timestamp'],
-                        'sender_type' => $msg['direction'] == 2 ? 'admin' : 'user'
+                        'sender_type' => $msg['direction'] == 2 ? 'admin' : 'user',
+                        'dialog_id' => (int)$msg['dialog_id']
                     ];
                 }, $messages),
                 'last_id' => (int)end($messages)['id'],
-                'count' => count($messages)
+                'count' => count($messages),
+                'dialog_id' => $dialog_id
             ];
             
             debug_log("Sending response with " . count($messages) . " messages");
@@ -177,11 +210,13 @@ while (time() - $startTime < $timeout) {
 }
 
 // Таймаут - нет новых сообщений
-debug_log("Timeout, no new messages");
+debug_log("Timeout, no new messages for dialog_id $dialog_id");
 echo json_encode([
     'success' => true,
     'messages' => [],
     'last_id' => $lastId,
     'count' => 0,
-    'timeout' => true
+    'timeout' => true,
+    'dialog_id' => $dialog_id
 ]);
+?>

@@ -18,7 +18,15 @@ export default defineConfig({
       '/start_dialog.php': {
         target: 'http://mondaytalks',
         changeOrigin: true,
-      }
+      },
+      '/end_dialog.php': {
+        target: 'http://mondaytalks',
+        changeOrigin: true,
+      },
+      '/restore_dialog.php': {
+        target: 'http://mondaytalks',
+        changeOrigin: true,
+      },
     }
   }
 })

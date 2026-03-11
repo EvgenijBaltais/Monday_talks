@@ -15,10 +15,11 @@ import '../assets/css/style.css'
         user_id: 0,
         dialog_id: 0,
         chat_identifier: 0,
-        longPollingActive: 0,
+        dialog_disabled: 0,
+        dialog_in_proccess: 0,
 
         chat_start_phrases: [
-            { manager: 'Привет! Добро пожаловать!' },
+            { manager: 'Добро пожаловать!' },
             { manager: 'Чем могу помочь?' }
         ],
 
@@ -37,7 +38,6 @@ import '../assets/css/style.css'
             // Очищаем поле ввода
             inputElement.value = '';
 
-            
             this.sendMessage(messageText, this.dialog_id)
                 .then(data => {
                     if (data && data.success) {
@@ -46,8 +46,8 @@ import '../assets/css/style.css'
                         console.error('Ошибка отправки:', data?.error || 'Неизвестная ошибка');
                     }
 
-                    if (!this.longPollingActive) {
-                        this.longPollingActive += 1
+                    if (!this.pollingActive) {
+                        this.pollingActive += 1
 
                         this.startLongPolling()
                     }
@@ -55,14 +55,11 @@ import '../assets/css/style.css'
                 .catch(error => {
                     console.error('Ошибка при отправке:', error);
                 });
-
             
             return true;
         },
 
         async startDialog () {
-
-            this.dialog_id = this.getCookie('dialog_id') || 0
 
             const dialog_id = this.dialog_id
             const fingerprint = this.user_id
@@ -80,11 +77,85 @@ import '../assets/css/style.css'
 
                 this.dialog_id = data.dialog_id
                 this.setCookie('dialog_id', data.dialog_id, 3);
+                this.setCookie('dialog_in_proccess', 1, 3);
 
                 console.log(data)
 
             } catch (error) {
                 console.error('Start Dialog error:', error);
+            }
+
+            if (document.querySelectorAll('.blocking-dialog').length) {
+                document.querySelectorAll('.blocking-dialog').forEach(item => item.remove())
+            }
+        },
+
+        async restoreDialog () {
+
+            const dialog_id = this.dialog_id
+            const fingerprint = this.user_id
+
+            try {
+                const response = await fetch ('restore_dialog.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ dialog_id, fingerprint })
+                }) 
+
+                const data = await response.json()
+
+                console.log(data)
+
+                if (data.messages.length) {
+                    let obj = {}
+                    data.messages.forEach(item => {
+                        obj[item.direction === 1 ? 'client' : 'manager'] = item.text
+                        this.chat_start_phrases.push(obj)
+                        obj = {}
+                    })
+                }
+
+                if (!this.pollingActive) {
+                    this.pollingActive += 1
+
+                    this.startLongPolling()
+                }
+
+            } catch (error) {
+                console.error('Start Dialog error:', error);
+            }
+
+            if (document.querySelectorAll('.blocking-dialog').length) {
+                document.querySelectorAll('.blocking-dialog').forEach(item => item.remove())
+            }
+        },
+
+        async endDialog () {
+
+            const dialog_id = this.dialog_id
+
+            try {
+
+                this.deleteCookie('dialog_id')
+                this.deleteCookie('dialog_in_proccess');
+                this.dialog_in_proccess = false
+                this.dialog_id = false
+
+                const response = await fetch ('end_dialog.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ dialog_id })
+                }) 
+
+                const data = await response.json()
+                return data
+
+            } catch (error) {
+                console.error('End Dialog error:', error);
             }
         },
 
@@ -116,8 +187,48 @@ import '../assets/css/style.css'
 
                 if (e.target.classList.contains('finish-dialog')) {
                     e.preventDefault();
-
                     
+                    this.endDialog (this.dialog_id).then(data => {
+
+                        this.getParent(e.target, 'monday-dialog').querySelectorAll('.d-speech').forEach(item => item.remove())
+
+                        this.chat_start_phrases.slice(0, 2);
+
+                        let img = new Image();
+                        let img_src_index = this.getRandomNumber()
+                            img.src = `/assets/images/end_chat/${img_src_index}.png`;
+
+                        this.getParent(e.target, 'monday-dialog').querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', `
+                            <div class = "dialog-end-w">
+                                <img src = "/assets/images/end_chat/${img_src_index}.png" class = "dialog-end-pic">
+                                <p class = "dialog-end-p">Диалог завершен.</p>
+                                <button class = "dialog-end-btn">Начать новый диалог</button>
+                            </div>
+                        `)
+
+                        this.getParent(e.target, 'monday-dialog').querySelector('.dialog-form').insertAdjacentHTML('beforeend', `
+                            <div class = "blocking-dialog"></div>
+                        `)
+
+                        e.target.remove()
+                    })
+                }
+
+                // Открытие чата заново
+
+                if (e.target.classList.contains('dialog-end-btn')) {
+                    e.preventDefault();
+                    
+                    this.startDialog().then(() => {
+
+                        this.getParent(e.target, 'monday-dialog').querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', `${this.chat_start_phrases.map(item => {
+                            return Object.keys(item).map(key => {
+                                return key === 'manager' ? this.managerSpeech(item[key]) : this.clientSpeech(item[key]);
+                            }).join('');
+                        }).join('')}`)
+
+                        e.target.parentElement.remove()
+                    })
                 }
 
                 // Смайлы, появление выбора
@@ -212,6 +323,11 @@ import '../assets/css/style.css'
         },
 
         async sendMessage(message, dialog_id, isAdmin = false) {
+
+            if (!document.querySelector('.finish-dialog')) {
+                document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
+            }
+
             try {
                 // Используем сохраненный user_id
                 const fingerprint = this.user_id;
@@ -234,8 +350,8 @@ import '../assets/css/style.css'
                 });
 
                 const data = await response.json();
-                console.log(data)
                 return data;
+
             } catch (error) {
                 console.error('Send error:', error);
                 return { success: false, error: error.message };
@@ -285,7 +401,8 @@ import '../assets/css/style.css'
         },
 
         startLongPolling() {
-            let lastMessageId = 0;
+            let lastMessageId = 0,
+                dialog_id = this.dialog_id
 
             console.log('go')
 
@@ -299,7 +416,8 @@ import '../assets/css/style.css'
                     },
                     body: JSON.stringify({
                         user_id: this.user_id,
-                        last_id: lastMessageId
+                        last_id: lastMessageId,
+                        dialog_id
                     })
                 })
                     .then(response => {
@@ -310,7 +428,7 @@ import '../assets/css/style.css'
                     })
                     .then(data => {
                         if (data.messages && data.messages.length > 0) {
-                            console.log('Новые сообщения:', data.messages);
+                            console.log(`Новые сообщения по dialog_id ${dialog_id}:`, data.messages);
 
                             data.messages.forEach(item => {
                                 // Проверяем, что сообщение от админа (direction = 2)
@@ -369,7 +487,6 @@ import '../assets/css/style.css'
                     </div>
                     <div class="dialog-top__down">
                         <div class="online-status on">Мы онлайн</div>
-                        <div class="finish-dialog">Завершить диалог</div>
                     </div>
                     <svg viewBox="0 0 1440 40" preserveAspectRatio="none">
                         <path d="M0,20 C200,45 400,-5 600,20 C800,40 1000,10 1440,20 L1440,40 L0,40 Z" fill="#fff"/>
@@ -432,30 +549,77 @@ import '../assets/css/style.css'
             return value || null;
         },
 
+        deleteCookie(name) {
+            // Удаляем cookie с текущего пути
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            
+            // Пробуем удалить с других возможных путей
+            const pathParts = window.location.pathname.split('/');
+            let currentPath = '';
+            
+            for (let i = 0; i < pathParts.length; i++) {
+                currentPath += pathParts[i] + '/';
+                document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=' + currentPath + ';';
+            }
+        },
+
+        getParent(element, className) {
+            // Если элемент не существует, возвращаем null
+            if (element == null) return null;
+            
+            var parent = element.parentElement;
+            
+            while (parent != null) {
+                // Проверяем наличие класса
+                if (parent.className && (' ' + parent.className + ' ').indexOf(' ' + className + ' ') > -1) {
+                    return parent;
+                }
+                parent = parent.parentElement;
+            }
+            
+            return null;
+        },
+
+        getRandomNumber(min = 1, max = 7) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        },
+
         async init() {
             try {
+
+                // Проверка существования диалога
+                
+                this.dialog_id = this.getCookie('dialog_id') || 0
+                this.dialog_in_proccess = this.getCookie('dialog_in_proccess') || 0
+
                 // Инициализируем user_id
 
                 await this.initUserId()
 
-                // Проверяем наличие диалога
-                await this.startDialog()
+                // Проверяем наличие или продолжение диалога
+                console.log(this.dialog_id, this.dialog_in_proccess)
+                this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : await this.startDialog()
                 
                 if (!document.getElementById('app')) {
                     console.error('Элемент #app не найден');
                     return false;
                 }
 
-                // Проверка существования диалога
-                
-                this.dialog_id = this.getCookie('dialog_id') || 0
-
                 // Рендерим чат
                 document.querySelector('#app').innerHTML = this.renderChat();
                 
                 // Вешаем события
                 this.attachEvents();
-                
+
+
+                // Скроллим вниз после добавления всех сообщений
+                document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
+
+                // Добавляем кнопку, если надо
+                if (this.dialog_in_proccess && !document.querySelector('.finish-dialog')) {
+                    document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
+                }
+
             } catch (error) {
                 console.error('Ошибка инициализации чата:', error);
             }
