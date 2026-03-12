@@ -17,6 +17,9 @@ import '../assets/css/style.css'
         chat_identifier: 0,
         dialog_disabled: 0,
         dialog_in_proccess: 0,
+        lastMessageId: 0,
+        pollingActive: false,
+        pollingTimer: null,
 
         chat_start_phrases: [
             { manager: 'Добро пожаловать!' },
@@ -29,12 +32,7 @@ import '../assets/css/style.css'
             
             if (messageText === '') return false;
             
-            // Добавляем сообщение в чат
-            document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(messageText));
-            
-            // Скроллим вниз
-            document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
-            
+
             // Очищаем поле ввода
             inputElement.value = '';
 
@@ -44,12 +42,6 @@ import '../assets/css/style.css'
                         console.log('Сообщение отправлено:', messageText);
                     } else {
                         console.error('Ошибка отправки:', data?.error || 'Неизвестная ошибка');
-                    }
-
-                    if (!this.pollingActive) {
-                        this.pollingActive = true
-
-                        this.startLongPolling()
                     }
                 })
                 .catch(error => {
@@ -106,8 +98,6 @@ import '../assets/css/style.css'
 
                 const data = await response.json()
 
-                console.log(data)
-
                 if (data.messages.length) {
                     let obj = {}
                     data.messages.forEach(item => {
@@ -115,12 +105,9 @@ import '../assets/css/style.css'
                         this.chat_start_phrases.push(obj)
                         obj = {}
                     })
-                }
 
-                if (!this.pollingActive) {
-                    this.pollingActive += 1
-
-                    this.startLongPolling()
+                    this.lastMessageId = data.messages[data.messages.length - 1].id
+                    console.log(data.messages[data.messages.length - 1].id)
                 }
 
             } catch (error) {
@@ -134,6 +121,7 @@ import '../assets/css/style.css'
 
         async endDialog () {
 
+            this.stopLongPolling();
             const dialog_id = this.dialog_id
 
             try {
@@ -224,6 +212,8 @@ import '../assets/css/style.css'
                         }).join('')}`)
 
                         e.target.parentElement.remove()
+
+                        this.startLongPolling();
                     })
                 }
 
@@ -396,61 +386,84 @@ import '../assets/css/style.css'
                    Math.abs(hash * 2).toString(16).padStart(8, '0');
         },
 
+        stopLongPolling() {
+            this.pollingActive = false;
+            if (this.pollingTimer) {
+                clearTimeout(this.pollingTimer);
+                this.pollingTimer = null;
+            }
+            console.log('Long polling stopped');
+        },
+        
+        // Улучшенный startLongPolling
         startLongPolling() {
-            let lastMessageId = 0,
-                dialog_id = this.dialog_id
+            // 1. ОСТАНАВЛИВАЕМ предыдущий polling
+            this.stopLongPolling();
+            
+            // 2. Устанавливаем новый флаг
+            this.pollingActive = true;
+            
+            // 3. Получаем актуальные значения
+            const dialog_id = this.dialog_id;
+            let lastMessageId = parseInt(this.getCookie('last_message_id')) || 0;
+            
+            console.log('Start Long Polling with:', { dialog_id, lastMessageId });
 
-            console.log('go')
-
+            // 4. Создаем рекурсивную функцию с проверкой актуальности
             const poll = () => {
-                if (!this.pollingActive) return;
+                // Проверяем, не остановлен ли polling и актуален ли dialog_id
+                if (!this.pollingActive || this.dialog_id !== dialog_id) {
+                    console.log('Polling stopped or dialog_id changed');
+                    return;
+                }
                 
                 fetch('/poll_messages.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         user_id: this.user_id,
                         last_id: lastMessageId,
-                        dialog_id
+                        dialog_id: dialog_id // используем захваченное значение
                     })
                 })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.messages && data.messages.length > 0) {
-                            console.log(`Новые сообщения по dialog_id ${dialog_id}:`, data.messages);
+                .then(response => response.json())
+                .then(data => {
+                    // Проверяем, что polling все еще активен и dialog_id не изменился
+                    if (!this.pollingActive || this.dialog_id !== dialog_id) {
+                        return;
+                    }
+                    
+                    if (data.messages && data.messages.length > 0) {
+                        // Обновляем UI
+                        data.messages.forEach(item => {
+                            document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', 
+                                item.direction == 1 ? this.clientSpeech(item.message) : this.managerSpeech(item.message)
+                            );
+                        });
 
-                            data.messages.forEach(item => {
-                                // Проверяем, что сообщение от админа (direction = 2)
-                                if (item.direction == 2) {
-                                    document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(item.message));
-                                }
-                            });
+                        // Скроллим вниз после добавления всех сообщений
+                        document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
 
-                            // Скроллим вниз после добавления всех сообщений
-                            document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
-
-                            lastMessageId = data.messages[data.messages.length - 1].id;
-                        }
-                        if (this.pollingActive) poll();
-                    })
-                    .catch(error => {
-                        console.error('Polling error:', error);
-                        if (this.pollingActive) setTimeout(poll, 5000);
-                    });
+                        // Обновляем lastMessageId
+                        lastMessageId = data.messages[data.messages.length - 1].id;
+                        this.setCookie('last_message_id', lastMessageId, 3);
+                    }
+                    
+                    // Планируем следующий запрос, если polling активен
+                    if (this.pollingActive && this.dialog_id === dialog_id) {
+                        this.pollingTimer = setTimeout(poll, 1000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Polling error:', error);
+                    if (this.pollingActive && this.dialog_id === dialog_id) {
+                        this.pollingTimer = setTimeout(poll, 5000);
+                    }
+                });
             };
-
+            
+            // Запускаем polling
             poll();
-
-            window.addEventListener('beforeunload', () => {
-                this.pollingActive = false;
-            });
         },
 
         renderChat() {
@@ -595,7 +608,7 @@ import '../assets/css/style.css'
                 // Проверяем наличие или продолжение диалога
                 console.log(this.dialog_id, this.dialog_in_proccess)
                 this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : await this.startDialog()
-                
+
                 if (!document.getElementById('app')) {
                     console.error('Элемент #app не найден');
                     return false;
@@ -607,7 +620,6 @@ import '../assets/css/style.css'
                 // Вешаем события
                 this.attachEvents();
 
-
                 // Скроллим вниз после добавления всех сообщений
                 document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
 
@@ -615,6 +627,9 @@ import '../assets/css/style.css'
                 if (this.dialog_in_proccess && !document.querySelector('.finish-dialog')) {
                     document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
                 }
+
+                // Начинаем отслеживать
+                this.startLongPolling()
 
             } catch (error) {
                 console.error('Ошибка инициализации чата:', error);
