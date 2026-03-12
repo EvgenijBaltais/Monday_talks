@@ -20,6 +20,16 @@ import '../assets/css/style.css'
         lastMessageId: 0,
         pollingActive: false,
         pollingTimer: null,
+        preloadImages: [
+            "/assets/images/end_chat/1.png",
+            "/assets/images/end_chat/2.png",
+            "/assets/images/end_chat/3.png",
+            "/assets/images/end_chat/4.png",
+            "/assets/images/end_chat/5.png",
+            "/assets/images/end_chat/6.png",
+            "/assets/images/end_chat/7.png"
+        ],
+        preloadImagesIndex: Math.floor(Math.random() * 7),
 
         chat_start_phrases: [
             { manager: 'Добро пожаловать!' },
@@ -184,7 +194,7 @@ import '../assets/css/style.css'
 
                         this.getParent(e.target, 'monday-dialog').querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', `
                             <div class = "dialog-end-w">
-                                <img src = "/assets/images/end_chat/${this.getRandomNumber()}.png" class = "dialog-end-pic">
+                                <img src = "${this.preloadImages[this.preloadImagesIndex]}" class = "dialog-end-pic">
                                 <p class = "dialog-end-p">Диалог завершен.</p>
                                 <button class = "dialog-end-btn">Начать новый диалог</button>
                             </div>
@@ -571,7 +581,6 @@ import '../assets/css/style.css'
                 document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=' + currentPath + ';';
             }
         },
-
         getParent(element, className) {
             // Если элемент не существует, возвращаем null
             if (element == null) return null;
@@ -589,8 +598,10 @@ import '../assets/css/style.css'
             return null;
         },
 
-        getRandomNumber(min = 1, max = 7) {
-            return Math.floor(Math.random() * (max - min + 1)) + min;
+        preloadImage (arr, index) {
+            console.log(arr[index])
+            let img = new Image();
+            img.src = arr[index];
         },
 
         async init() {
@@ -630,6 +641,10 @@ import '../assets/css/style.css'
 
                 // Начинаем отслеживать
                 this.startLongPolling()
+
+                
+                // Прелоад картинки в конце чата
+                this.preloadImage (this.preloadImages, this.preloadImagesIndex)
 
             } catch (error) {
                 console.error('Ошибка инициализации чата:', error);
