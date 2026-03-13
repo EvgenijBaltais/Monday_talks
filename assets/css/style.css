@@ -111,8 +111,11 @@ button:focus-visible {
 /* Стили */
 .monday-dialog {
   position: fixed;
-  right: 850px;
-  bottom: 80px;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  top: 0;
+  margin: 0 auto;
   width: 370px;
   height: 600px;
   box-shadow: 0 0 5px 0 rgba(34, 60, 80, .2);
@@ -316,7 +319,7 @@ button:focus-visible {
 }
 
 .online-status.on:before {
-  background-color: #43A72D;
+  background-color: #0EBC79;
 }
 
 .online-status.off:before {
@@ -651,4 +654,13 @@ svg {
 .dialog-end-btn:hover {
   background-color: #1C62A6;
   transition: .2s background-color;
+}
+
+
+@media screen and (max-width: 600px) {
+  .monday-dialog {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
 }

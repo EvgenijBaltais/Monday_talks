@@ -82,8 +82,6 @@ import '../assets/css/style.css'
                 this.setCookie('dialog_in_proccess', 1, 3);
 
                 console.log(data)
-                // Начинаем отслеживать
-                this.pollingActive ? '' : this.startLongPolling()
 
             } catch (error) {
                 console.error('Start Dialog error:', error);
@@ -620,7 +618,7 @@ import '../assets/css/style.css'
 
                 // Проверяем наличие или продолжение диалога
                 console.log(this.dialog_id, this.dialog_in_proccess)
-                this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : ''//await this.startDialog()
+                this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : await this.startDialog()
 
                 if (!document.getElementById('app')) {
                     console.error('Элемент #app не найден');
@@ -637,9 +635,13 @@ import '../assets/css/style.css'
                 document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
 
                 // Добавляем кнопку, если надо
-                if (this.dialog_in_proccess && !document.querySelector('.finish-dialog')) {console.log(22)
+                if (this.dialog_in_proccess && !document.querySelector('.finish-dialog')) {
                     document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
                 }
+
+                // Начинаем отслеживать
+                this.startLongPolling()
+
                 
                 // Прелоад картинки в конце чата
                 this.preloadImage (this.preloadImages, this.preloadImagesIndex)
