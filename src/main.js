@@ -20,6 +20,7 @@ import '../assets/css/style.css'
         lastMessageId: 0,
         pollingActive: false,
         pollingTimer: null,
+        isAdmin: 0,
         preloadImages: [
             "/assets/images/end_chat/1.png",
             "/assets/images/end_chat/2.png",
@@ -37,16 +38,19 @@ import '../assets/css/style.css'
         ],
 
         // Единый метод для отправки сообщения
-        handleMessageSubmit(inputElement) {
+        async handleMessageSubmit(inputElement) {
             const messageText = inputElement.value.trim();
             
             if (messageText === '') return false;
             
-
             // Очищаем поле ввода
             inputElement.value = '';
 
-            this.sendMessage(messageText, this.dialog_id)
+            if (!this.dialog_id) {console.log(1)
+                await this.startDialog ()
+            }
+
+            this.sendMessage(messageText, this.dialog_id, this.isAdmin)
                 .then(data => {
                     if (data && data.success) {
                         console.log('Сообщение отправлено:', messageText);
@@ -82,6 +86,9 @@ import '../assets/css/style.css'
                 this.setCookie('dialog_in_proccess', 1, 3);
 
                 console.log(data)
+                
+                // Начинаем отслеживать
+                this.startLongPolling()
 
             } catch (error) {
                 console.error('Start Dialog error:', error);
@@ -117,7 +124,6 @@ import '../assets/css/style.css'
                     })
 
                     this.lastMessageId = data.messages[data.messages.length - 1].id
-                    console.log(data.messages[data.messages.length - 1].id)
                 }
 
             } catch (error) {
@@ -295,7 +301,6 @@ import '../assets/css/style.css'
             if (userId) {
                 // Если нашли в куки - используем
                 this.user_id = userId;
-                console.log('Загружен user_id из куки:', userId);
                 return userId;
             }
 
@@ -305,7 +310,6 @@ import '../assets/css/style.css'
                 this.user_id = userId;
                 // Сохраняем в куки на 3 дня
                 this.setCookie('user_id', userId, 3);
-                console.log('Сгенерирован новый user_id:', userId);
                 return userId;
             } catch (error) {
                 console.error('Ошибка генерации fingerprint:', error);
@@ -402,13 +406,14 @@ import '../assets/css/style.css'
                 clearTimeout(this.pollingTimer);
                 this.pollingTimer = null;
             }
-            console.log('Long polling stopped');
         },
         
         // Улучшенный startLongPolling
         startLongPolling() {
             // 1. ОСТАНАВЛИВАЕМ предыдущий polling
             this.stopLongPolling();
+
+            console.log('startLongPolling')
             
             // 2. Устанавливаем новый флаг
             this.pollingActive = true;
@@ -416,14 +421,11 @@ import '../assets/css/style.css'
             // 3. Получаем актуальные значения
             const dialog_id = this.dialog_id;
             let lastMessageId = parseInt(this.getCookie('last_message_id')) || 0;
-            
-            console.log('Start Long Polling with:', { dialog_id, lastMessageId });
 
             // 4. Создаем рекурсивную функцию с проверкой актуальности
             const poll = () => {
                 // Проверяем, не остановлен ли polling и актуален ли dialog_id
                 if (!this.pollingActive || this.dialog_id !== dialog_id) {
-                    console.log('Polling stopped or dialog_id changed');
                     return;
                 }
                 
@@ -599,7 +601,6 @@ import '../assets/css/style.css'
         },
 
         preloadImage (arr, index) {
-            console.log(arr[index])
             let img = new Image();
             img.src = arr[index];
         },
@@ -617,8 +618,7 @@ import '../assets/css/style.css'
                 await this.initUserId()
 
                 // Проверяем наличие или продолжение диалога
-                console.log(this.dialog_id, this.dialog_in_proccess)
-                this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : await this.startDialog()
+                this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : ''//await this.startDialog()
 
                 if (!document.getElementById('app')) {
                     console.error('Элемент #app не найден');
@@ -638,9 +638,6 @@ import '../assets/css/style.css'
                 if (this.dialog_in_proccess && !document.querySelector('.finish-dialog')) {
                     document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
                 }
-
-                // Начинаем отслеживать
-                this.startLongPolling()
 
                 
                 // Прелоад картинки в конце чата
