@@ -20,7 +20,6 @@ import '../assets/css/style.css'
         lastMessageId: 0,
         pollingActive: false,
         pollingTimer: null,
-        isAdmin: 0,
         preloadImages: [
             "/assets/images/end_chat/1.png",
             "/assets/images/end_chat/2.png",
@@ -50,7 +49,7 @@ import '../assets/css/style.css'
                 await this.startDialog ()
             }
 
-            this.sendMessage(messageText, this.dialog_id, this.isAdmin)
+            this.sendMessage(messageText, this.dialog_id)
                 .then(data => {
                     if (data && data.success) {
                         console.log('Сообщение отправлено:', messageText);
@@ -185,6 +184,20 @@ import '../assets/css/style.css'
                     if (inputElement) {
                         this.handleMessageSubmit(inputElement);
                     }
+                }
+
+                // Нажатие по кнопке вызова чата
+
+                if (e.target.closest('.dialog-chat-icon')) {
+                    
+                    if (document.querySelector('.monday-dialog').classList.contains('visible')) {
+                        document.querySelector('.monday-dialog').classList.remove('visible')
+                        e.target.closest('.dialog-chat-icon').classList.remove('show')
+                        return false
+                    }
+
+                    document.querySelector('.monday-dialog').classList.add('visible')
+                    e.target.closest('.dialog-chat-icon').classList.add('show')
                 }
 
                 // Закрытие сеанса чата
@@ -479,25 +492,13 @@ import '../assets/css/style.css'
         },
 
         renderChat() {
-            return `<div class="monday-dialog">
-                <div class="options-select">
-                    <div class="message-bubble">
-                        <ul class="options-list">
-                            <li class="options-list-item">
-                                <a class="options-list-link">Позвать менеджера</a>
-                            </li>
-                            <li class="options-list-item">
-                                <a class="options-list-link">Сменить имя</a>
-                            </li>
-                            <li class="options-list-item">
-                                <a class="options-list-link">Написать в мессенджер</a>
-                            </li>
-                            <li class="options-list-item">
-                                <a class="options-list-link">Написать на email</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+            return `
+                <div class = "dialog-chat-icon">
+                    <div class = "icon icon-1"></div>
+                    <div class = "icon icon-2"></div>
+                    <div class = "icon icon-3"></div>
+                </div>    
+            <div class="monday-dialog">
                 <div class="dialog-top">
                     <div class="dialog-top__up">
                         <div class="manager-icon" style="background-image: url('./assets/images/femalemanager.jpg')"></div>

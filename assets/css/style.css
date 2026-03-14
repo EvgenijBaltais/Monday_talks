@@ -35,9 +35,11 @@ a:hover {
 }
 
 body {
+  position: relative;
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background-color: rgb(240, 240, 240);
 }
 
 h1 {
@@ -110,6 +112,7 @@ button:focus-visible {
 
 /* Стили */
 .monday-dialog {
+  display: none;
   position: fixed;
   right: 0;
   left: 0;
@@ -122,8 +125,12 @@ button:focus-visible {
   border-radius: 15px;
   overflow: hidden;
   padding-bottom: 130px;
+  background: #fff;
 }
 
+.monday-dialog.visible {
+ display: block
+}
 .dialog-top {
   position: relative;
   width: 100%;
@@ -201,78 +208,6 @@ button:focus-visible {
   padding-right: 15px;
   position: relative;
 }
-
-.options-select {
-  position: absolute;
-  right: 10px;
-  top: 20px;
-  display: block;
-  width: 50px;
-  height: 40px;
-  background-position: 30px 5px;
-  background-size: 5px;
-  background-repeat: no-repeat;
-  background-image: url('../assets/images/menu_14988291.png');
-  cursor: pointer;
-  z-index: 1;
-}
-
-.options-select:hover .message-bubble {
-  display: block;
-}
-
-.options-list {
-      list-style-type: none;
-}
-
-.options-list-item {
-  padding: 0 20px;
-  padding-bottom: 10px;
-}
-
-.options-list-item:last-child {
-  padding-bottom: 0;
-}
-
-.options-list-link {
-  color: #000;
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: normal;
-  text-decoration: none;
-}
-
-/* Облако*/
-
-.message-bubble {
-  display: none;
-  position: absolute;
-  width: 250px;
-  right: -2px;
-  top: 38px;
-  background: white;
-  padding: 20px 10px;
-  border-radius: 10px;
-  box-shadow: 0 0 12px 0 rgba(34, 60, 80, .2);
-  z-index: 2;
-}
-
-.message-bubble::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  right: 10px;
-  width: 0;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-bottom: 10px solid white;
-  
-  box-shadow: none;
-  border-top: none;
-}
-
-/* Облако, конец */
 
 .manager-job {
   font-size: 16px;
@@ -566,38 +501,6 @@ svg {
 
 
 /* Стилизация всей полосы прокрутки */
-/*
-.dialog-middle {
-  scrollbar-width: thin;
-  scrollbar-color: #186FEB #f0f0f0;
-}
-
-.dialog-middle::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.dialog-middle::-webkit-scrollbar-track {
-  background: #f0f0f0;
-  border-radius: 4px;
-}
-
-.dialog-middle::-webkit-scrollbar-thumb {
-  background: #186FEB;
-  border-radius: 4px;
-}
-
-.dialog-middle::-webkit-scrollbar-thumb:hover {
-  background: #1358c0;
-}
-
-.dialog-middle::-webkit-scrollbar-track,
-.dialog-middle::-webkit-scrollbar-thumb,
-.dialog-middle::-webkit-scrollbar-corner {
-  box-shadow: none;
-  border: none;
-}
-*/
 
 /* Скрываем скролл полностью */
 .dialog-middle {
@@ -656,6 +559,182 @@ svg {
   transition: .2s background-color;
 }
 
+/* Иконка чата */
+
+.dialog-chat-icon {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  right: 50px;
+  bottom: 50px;
+  width: 100px;
+  height: 100px;
+  background-color: #1286F0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.dialog-chat-icon:before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 4%;
+  left: 4%;
+  width: 92%;
+  height: 92%;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.dialog-chat-icon.show .icon {
+  display: none;
+}
+.dialog-chat-icon.show {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 40px;
+    background-image: url('../assets/images/dialog_icons/close.svg');
+}
+
+.icon {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backface-visibility: hidden;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    /* Плавность для всех свойств */
+    transition: all 0s;
+}
+
+/* Делим 100% на 3 иконки = 33.33% на каждую */
+/* Каждая иконка видна примерно 30%, а 3.33% уходит на переворот */
+
+.icon-1 {
+    animation: showFirst 9s infinite;
+    background-image: url('../assets/images/dialog_icons/chat_4563195.png');
+}
+
+.icon-2 {
+    transform: rotateY(-180deg);
+    animation: showSecond 9s infinite;
+    background-image: url('../assets/images/dialog_icons/question_17289005.png');
+}
+
+.icon-3 {
+    transform: rotateY(-180deg);
+    animation: showThird 9s infinite;
+    background-image: url('../assets/images/dialog_icons/email_751252.png');
+}
+
+/* КЛЮЧЕВОЙ МОМЕНТ: используем visibility для скрытия */
+@keyframes showFirst {
+    0%, 32% {
+        visibility: visible;
+        opacity: 1;
+        transform: rotateY(0);
+    }
+    32.5% {
+        visibility: visible;
+        opacity: 1;
+        transform: rotateY(90deg);
+    }
+    33% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(180deg);
+    }
+    33.5%, 100% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(180deg);
+    }
+}
+
+@keyframes showSecond {
+    0%, 32% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(-180deg);
+    }
+    32.5% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(-90deg);
+    }
+    33% {
+        visibility: visible;
+        opacity: 1;
+        transform: rotateY(0);
+    }
+    65% {
+        visibility: visible;
+        opacity: 1;
+        transform: rotateY(0);
+    }
+    65.5% {
+        visibility: visible;
+        opacity: 1;
+        transform: rotateY(90deg);
+    }
+    66% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(180deg);
+    }
+    66.5%, 100% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(-180deg);
+    }
+}
+
+@keyframes showThird {
+    0%, 65% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(-180deg);
+    }
+    65.5% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(-90deg);
+    }
+    66% {
+        visibility: visible;
+        opacity: 1;
+        transform: rotateY(0);
+    }
+    98% {
+        visibility: visible;
+        opacity: 1;
+        transform: rotateY(0);
+    }
+    98.5% {
+        visibility: visible;
+        opacity: 1;
+        transform: rotateY(90deg);
+    }
+    99% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(180deg);
+    }
+    99.5%, 100% {
+        visibility: hidden;
+        opacity: 0;
+        transform: rotateY(-180deg);
+    }
+}
+
+
+/* Иконка чата, конец */
 
 @media screen and (max-width: 600px) {
   .monday-dialog {
