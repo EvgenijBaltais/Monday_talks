@@ -4,6 +4,7 @@ import '../assets/css/style.css'
 
     let Monday_talks_chat = {
 
+        is_admin: false,
         managers_name: 'Вилора',
         clients_name: 'Клиент',
         managers_photo: 'femalemanager.jpg',
@@ -32,9 +33,10 @@ import '../assets/css/style.css'
         preloadImagesIndex: Math.floor(Math.random() * 7),
 
         chat_start_phrases: [
-            { manager: 'Добро пожаловать!' },
-            { manager: 'Чем могу помочь?' }
+            { id: false, role: 'manager', message: 'Добро пожаловать!' },
+            { id: false, role: 'manager', message: 'Чем могу помочь?' }
         ],
+        dialog_state: [],
 
         // Единый метод для отправки сообщения
         async handleMessageSubmit(inputElement) {
@@ -45,11 +47,11 @@ import '../assets/css/style.css'
             // Очищаем поле ввода
             inputElement.value = '';
 
-            if (!this.dialog_id) {console.log(1)
+            if (!this.dialog_id) {
                 await this.startDialog ()
             }
 
-            this.sendMessage(messageText, this.dialog_id)
+            this.sendMessage(messageText, this.dialog_id, this.is_admin)
                 .then(data => {
                     if (data && data.success) {
                         console.log('Сообщение отправлено:', messageText);
@@ -84,8 +86,6 @@ import '../assets/css/style.css'
                 this.setCookie('dialog_id', data.dialog_id, 3);
                 this.setCookie('dialog_in_proccess', 1, 3);
 
-                console.log(data)
-                
                 // Начинаем отслеживать
                 this.startLongPolling()
 
@@ -118,7 +118,7 @@ import '../assets/css/style.css'
                     let obj = {}
                     data.messages.forEach(item => {
                         obj[item.direction === 1 ? 'client' : 'manager'] = item.text
-                        this.chat_start_phrases.push(obj)
+                        this.dialog_state.push(obj)
                         obj = {}
                     })
 
@@ -209,7 +209,7 @@ import '../assets/css/style.css'
 
                         this.getParent(e.target, 'monday-dialog').querySelectorAll('.d-speech').forEach(item => item.remove())
 
-                        this.chat_start_phrases = this.chat_start_phrases.slice(0, 2);
+                        this.dialog_state = this.dialog_state.slice(0, 2);
 
                         this.getParent(e.target, 'monday-dialog').querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', `
                             <div class = "dialog-end-w">
@@ -234,10 +234,8 @@ import '../assets/css/style.css'
                     
                     this.startDialog().then(() => {
 
-                        this.getParent(e.target, 'monday-dialog').querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', `${this.chat_start_phrases.map(item => {
-                            return Object.keys(item).map(key => {
-                                return key === 'manager' ? this.managerSpeech(item[key]) : this.clientSpeech(item[key]);
-                            }).join('');
+                        this.getParent(e.target, 'monday-dialog').querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', `${this.dialog_state.map(elem => {
+                            return elem.role === 'manager' ? this.managerSpeech(elem.message) : this.clientSpeech(elem.message);
                         }).join('')}`)
 
                         e.target.parentElement.remove()
@@ -335,18 +333,28 @@ import '../assets/css/style.css'
 
         },
 
-        async sendMessage(message, dialog_id, isAdmin = false) {
+        async sendMessage(message, dialog_id, is_admin) {
 
             if (!document.querySelector('.finish-dialog')) {
                 document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
             }
+
+            // Добавляем в массив диалогов и на экран
+            this.dialog_state.push({id: 'new', role: is_admin ? 'manager' : 'client', message : message}), 
+
+            is_admin ?
+                document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.managerSpeech(message)) :
+                document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(message))
+
+            document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
+
 
             try {
                 // Используем сохраненный user_id
                 const fingerprint = this.user_id;
                 
                 // Определяем direction: 1 - от клиента, 2 - от менеджера
-                const direction = isAdmin ? 2 : 1;
+                const direction = is_admin ? 2 : 1;
                 
                 const response = await fetch('/send_message.php', {
                     method: 'POST',
@@ -358,7 +366,7 @@ import '../assets/css/style.css'
                         message,
                         dialog_id,
                         direction,
-                        admin: isAdmin ? 1 : 0
+                        admin: is_admin ? 1 : 0
                     })
                 });
 
@@ -421,60 +429,86 @@ import '../assets/css/style.css'
             }
         },
         
-        // Улучшенный startLongPolling
         startLongPolling() {
-            // 1. ОСТАНАВЛИВАЕМ предыдущий polling
+            // Останавливаем предыдущий polling
             this.stopLongPolling();
 
-            console.log('startLongPolling')
+            console.log('Начинаем отслеживать диалог:', this.dialog_id);
+            console.log('User ID:', this.user_id);
             
-            // 2. Устанавливаем новый флаг
+            // Устанавливаем новый флаг
             this.pollingActive = true;
             
-            // 3. Получаем актуальные значения
+            // Сохраняем текущий dialog_id для проверки
             const dialog_id = this.dialog_id;
-            let lastMessageId = parseInt(this.getCookie('last_message_id')) || 0;
 
-            // 4. Создаем рекурсивную функцию с проверкой актуальности
+            // Создаем рекурсивную функцию
             const poll = () => {
-                // Проверяем, не остановлен ли polling и актуален ли dialog_id
+
                 if (!this.pollingActive || this.dialog_id !== dialog_id) {
+                    console.log('Polling остановлен или dialog_id изменился');
                     return;
                 }
-                
+
                 fetch('/poll_messages.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         user_id: this.user_id,
-                        last_id: lastMessageId,
-                        dialog_id: dialog_id // используем захваченное значение
+                        dialog_id: dialog_id
                     })
                 })
-                .then(response => response.json())
+                .then(response => {
+                    return response.json();
+                })
                 .then(data => {
-                    // Проверяем, что polling все еще активен и dialog_id не изменился
+
+                    // Проверяем наши сообщения и добавляем в this.dialog_state то что пришло из базы если надо
+
+                    let el = document.querySelector('.dialog-middle-w'),
+                        arr = []
+
+                    this.dialog_state.forEach(item => {
+                        if (item.id === false) return   // пропускаем вступительные стандартные сообщения
+
+                        //console.log(this.dialog_state)
+
+                        data.messages.forEach(item2 => {
+
+                            if (item.id === item2.id) return
+                            console.log(222)
+                            // Проставить id новому сообщению, которое уже отразилось на экране и попало в базу
+                            if (item.id === 'new' && item.message === item2.message) {console.log(555)
+                                if (item.message === item2.message) {
+                                    item.id = item2.id
+                                    return
+                                }
+                            }
+
+                            arr.push({id: item2.id, role: this.is_admin ? 'manager' : 'client', message : item2.message })
+                            //el.insertAdjacentHTML('beforeend', this.clientSpeech(message))
+                        })
+                    })
+
+                    console.log(arr)
+   
+                    // Отрисовать фразы, которых еще нету.
+
+
+                    // Проверяем, что polling все еще активен
                     if (!this.pollingActive || this.dialog_id !== dialog_id) {
+                        console.log('Polling остановлен после ответа');
                         return;
                     }
                     
-                    if (data.messages && data.messages.length > 0) {
-                        // Обновляем UI
-                        data.messages.forEach(item => {
-                            document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', 
-                                item.direction == 1 ? this.clientSpeech(item.message) : this.managerSpeech(item.message)
-                            );
-                        });
-
-                        // Скроллим вниз после добавления всех сообщений
-                        document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
-
-                        // Обновляем lastMessageId
-                        lastMessageId = data.messages[data.messages.length - 1].id;
-                        this.setCookie('last_message_id', lastMessageId, 3);
+                    // Проверяем наличие ошибок
+                    if (data.error) {
+                        console.error('Ошибка от сервера:', data.error, data.details);
+                        this.pollingTimer = setTimeout(poll, 5000);
+                        return;
                     }
                     
-                    // Планируем следующий запрос, если polling активен
+                    // Планируем следующий запрос
                     if (this.pollingActive && this.dialog_id === dialog_id) {
                         this.pollingTimer = setTimeout(poll, 1000);
                     }
@@ -482,6 +516,7 @@ import '../assets/css/style.css'
                 .catch(error => {
                     console.error('Polling error:', error);
                     if (this.pollingActive && this.dialog_id === dialog_id) {
+                        console.log('Повторная попытка через 5 секунд');
                         this.pollingTimer = setTimeout(poll, 5000);
                     }
                 });
@@ -492,6 +527,11 @@ import '../assets/css/style.css'
         },
 
         renderChat() {
+
+        this.chat_start_phrases.forEach(item => {
+            this.dialog_state.push(item)
+        })
+            
             return `
                 <div class = "dialog-chat-icon">
                     <div class = "icon icon-1"></div>
@@ -516,10 +556,8 @@ import '../assets/css/style.css'
                 </div>
                 <div class="dialog-middle">
                     <div class="dialog-middle-w">
-                        ${this.chat_start_phrases.map(item => {
-                            return Object.keys(item).map(key => {
-                                return key === 'manager' ? this.managerSpeech(item[key]) : this.clientSpeech(item[key]);
-                            }).join('');
+                        ${this.dialog_state.map(elem => {
+                            return elem.role === 'manager' ? this.managerSpeech(elem.message) : this.clientSpeech(elem.message);
                         }).join('')}
                     </div>
                 </div>
@@ -551,10 +589,6 @@ import '../assets/css/style.css'
                 <div class="d-speech-img" style="background-image: url('./assets/images/${this.client_photo}');"></div>
                 <div class="d-speech-text">${phrase}</div>
             </div>`;
-        },
-
-        authorisedAnswer(name) {
-            return this.managerSpeech(`Очень приятно ${name}! Сейчас я изучу ваш вопрос и позову менеджера. Он ответит на него!`);
         },
 
         setCookie(name, value, days) {
@@ -619,7 +653,7 @@ import '../assets/css/style.css'
                 await this.initUserId()
 
                 // Проверяем наличие или продолжение диалога
-                this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : ''//await this.startDialog()
+                //this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : ''//await this.startDialog()
 
                 if (!document.getElementById('app')) {
                     console.error('Элемент #app не найден');
@@ -652,5 +686,9 @@ import '../assets/css/style.css'
 
     // Запускаем инициализацию
     Monday_talks_chat.init();
+
+    setTimeout(() => {
+document.querySelector('.dialog-chat-icon').click()
+    }, 1000)
 
 })();
