@@ -465,32 +465,41 @@ import '../assets/css/style.css'
 
                     // Проверяем наши сообщения и добавляем в this.dialog_state то что пришло из базы если надо
 
-                    let el = document.querySelector('.dialog-middle-w'),
-                        arr = []
+                    let el = document.querySelector('.dialog-middle-w');
 
+                    // Создаем Map для быстрого поиска по message
+                    const messageToNewItemMap = new Map();
+                    const existingIds = new Set();
+
+                    // Один проход для сбора данных
                     this.dialog_state.forEach(item => {
-                        if (item.id === false) return   // пропускаем вступительные стандартные сообщения
+                        if (item.id && item.id !== 'new' && item.id !== false) {
+                            existingIds.add(item.id);
+                        } else if (item.id === 'new') {
+                            messageToNewItemMap.set(item.message, item);
+                        }
+                    });
 
-                        //console.log(this.dialog_state)
+                    // Второй проход - обработка новых сообщений
+                    data.messages.forEach(item2 => {
+                        if (existingIds.has(item2.id)) return;
+                        
+                        const newItem = messageToNewItemMap.get(item2.message);
+                        if (newItem) {
+                            newItem.id = item2.id;  // Обновляем существующее
+                        } else {
+                            this.dialog_state.push({  // Добавляем новое
+                                id: item2.id,
+                                role: this.is_admin ? 'manager' : 'client',
+                                message: item2.message
+                            });
+                        }
+                        
+                        existingIds.add(item2.id);
+                        // el.insertAdjacentHTML('beforeend', this.clientSpeech(item2.message));
+                    });
 
-                        data.messages.forEach(item2 => {
-
-                            if (item.id === item2.id) return
-                            console.log(222)
-                            // Проставить id новому сообщению, которое уже отразилось на экране и попало в базу
-                            if (item.id === 'new' && item.message === item2.message) {console.log(555)
-                                if (item.message === item2.message) {
-                                    item.id = item2.id
-                                    return
-                                }
-                            }
-
-                            arr.push({id: item2.id, role: this.is_admin ? 'manager' : 'client', message : item2.message })
-                            //el.insertAdjacentHTML('beforeend', this.clientSpeech(message))
-                        })
-                    })
-
-                    console.log(arr)
+                    console.log(this.dialog_state);
    
                     // Отрисовать фразы, которых еще нету.
 
