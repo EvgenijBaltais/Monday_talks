@@ -299,7 +299,7 @@ button:focus-visible {
   background-position: center;
   background-size: 25px;
   background-repeat: no-repeat;
-  background-image: url('../assets/images/smile_6518071.png');
+  background-image: url('../images/smile_6518071.png');
   cursor: pointer;
   margin-right: 20px;
 }
@@ -311,7 +311,7 @@ button:focus-visible {
   background-position: center;
   background-size: 23px;
   background-repeat: no-repeat;
-  background-image: url('../assets/images/clip_10408766.png');
+  background-image: url('../images/clip_10408766.png');
   cursor: pointer;
 }
 
@@ -323,7 +323,7 @@ button:focus-visible {
   background-position: center;
   background-size: 25px;
   background-repeat: no-repeat;
-  background-image: url('../assets/images/chat-bot_9621133.png');
+  background-image: url('../images/chat-bot_9621133.png');
   cursor: pointer;
   margin-right: 35px;
 }
@@ -366,7 +366,7 @@ button:focus-visible {
   height: 50px;
   border-radius: 50%;
   background-color: #006CF0;
-  background-image: url('./assets/images/876777.png');
+  background-image: url('../images/876777.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: 25px;
@@ -523,7 +523,7 @@ svg {
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
-  background-image: url('../assets/images/dialog_icons/close.svg');
+  background-image: url('../images/dialog_icons/close.svg');
   cursor: pointer;
 }
 
@@ -602,7 +602,7 @@ svg {
     background-repeat: no-repeat;
     background-position: center;
     background-size: 40px;
-    background-image: url('../assets/images/dialog_icons/close.svg');
+    background-image: url('../images/dialog_icons/close.svg');
 }
 
 .icon {
@@ -624,19 +624,19 @@ svg {
 
 .icon-1 {
     animation: showFirst 9s infinite;
-    background-image: url('../assets/images/dialog_icons/chat_4563195.png');
+    background-image: url('../images/dialog_icons/chat_4563195.png');
 }
 
 .icon-2 {
     transform: rotateY(-180deg);
     animation: showSecond 9s infinite;
-    background-image: url('../assets/images/dialog_icons/question_17289005.png');
+    background-image: url('../images/dialog_icons/question_17289005.png');
 }
 
 .icon-3 {
     transform: rotateY(-180deg);
     animation: showThird 9s infinite;
-    background-image: url('../assets/images/dialog_icons/email_751252.png');
+    background-image: url('../images/dialog_icons/email_751252.png');
 }
 
 /* КЛЮЧЕВОЙ МОМЕНТ: используем visibility для скрытия */
