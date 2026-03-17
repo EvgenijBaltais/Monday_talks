@@ -18,7 +18,6 @@ import '../assets/css/style.css'
         chat_identifier: 0,
         dialog_disabled: 0,
         dialog_in_proccess: 0,
-        lastMessageId: 0,
         pollingActive: false,
         pollingTimer: null,
         preloadImages: [
@@ -40,7 +39,8 @@ import '../assets/css/style.css'
 
         // Единый метод для отправки сообщения
         async handleMessageSubmit(inputElement) {
-            const messageText = inputElement.value.trim();
+
+            const messageText = inputElement.value.toString().trim()
             
             if (messageText === '') return false;
             
@@ -115,14 +115,9 @@ import '../assets/css/style.css'
                 const data = await response.json()
 
                 if (data.messages.length) {
-                    let obj = {}
                     data.messages.forEach(item => {
-                        obj[item.direction === 1 ? 'client' : 'manager'] = item.text
-                        this.dialog_state.push(obj)
-                        obj = {}
+                        this.dialog_state.push({id: item.id, message: item.text, role: item.direction === 1 ? 'client' : 'manager'})
                     })
-
-                    this.lastMessageId = data.messages[data.messages.length - 1].id
                 }
 
             } catch (error) {
@@ -132,6 +127,8 @@ import '../assets/css/style.css'
             if (document.querySelectorAll('.blocking-dialog').length) {
                 document.querySelectorAll('.blocking-dialog').forEach(item => item.remove())
             }
+
+            this.startLongPolling();
         },
 
         async endDialog () {
@@ -198,7 +195,26 @@ import '../assets/css/style.css'
 
                     document.querySelector('.monday-dialog').classList.add('visible')
                     e.target.closest('.dialog-chat-icon').classList.add('show')
+
+                    document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
                 }
+
+                // Нажатие по кнопке закрытия чата
+
+                if (e.target.closest('.close-chat')) {
+                    
+                    if (document.querySelector('.monday-dialog').classList.contains('visible')) {
+                        document.querySelector('.monday-dialog').classList.remove('visible')
+                        document.querySelector('.dialog-chat-icon').classList.remove('show')
+                        return false
+                    }
+
+                    document.querySelector('.monday-dialog').classList.add('visible')
+                    document.querySelector('.dialog-chat-icon').classList.add('show')
+
+                    document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
+                }
+
 
                 // Закрытие сеанса чата
 
@@ -339,6 +355,8 @@ import '../assets/css/style.css'
                 document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
             }
 
+           // String(message)
+            console.log(message.toString())
             // Добавляем в массив диалогов и на экран
             this.dialog_state.push({id: 'new', role: is_admin ? 'manager' : 'client', message : message}), 
 
@@ -466,6 +484,7 @@ import '../assets/css/style.css'
                     // Проверяем наши сообщения и добавляем в this.dialog_state то что пришло из базы если надо
 
                     let el = document.querySelector('.dialog-middle-w');
+                    let el2 = document.querySelector('.dialog-middle')
 
                     // Создаем Map для быстрого поиска по message
                     const messageToNewItemMap = new Map();
@@ -490,17 +509,21 @@ import '../assets/css/style.css'
                         } else {
                             this.dialog_state.push({  // Добавляем новое
                                 id: item2.id,
-                                role: this.is_admin ? 'manager' : 'client',
+                                role: item2.direction === 2 ? 'manager' : 'client',
                                 message: item2.message
                             });
                         }
                         
                         existingIds.add(item2.id);
-                        // el.insertAdjacentHTML('beforeend', this.clientSpeech(item2.message));
+
+                        // Отрисовать фразы, которых еще нету.
+
+                        this.is_admin && item2.direction === 1 ? el.insertAdjacentHTML('beforeend', this.clientSpeech(item2.message)) : '' 
+                        !this.is_admin && item2.direction === 2 ? el.insertAdjacentHTML('beforeend', this.managerSpeech(item2.message)) : ''
+
+                        el2.scrollTop = el.scrollHeight;
                     });
 
-                    console.log(this.dialog_state);
-   
                     // Отрисовать фразы, которых еще нету.
 
 
@@ -535,10 +558,10 @@ import '../assets/css/style.css'
             poll();
         },
 
-        renderChat() {
+        async renderChat() {
 
         this.chat_start_phrases.forEach(item => {
-            this.dialog_state.push(item)
+            this.dialog_state.unshift(item)
         })
             
             return `
@@ -555,6 +578,7 @@ import '../assets/css/style.css'
                             <div class="manager-job">Менеджер</div>
                             <div class="manager-name">${this.managers_name}</div>
                         </div>
+                        <div class = "close-chat"></div>
                     </div>
                     <div class="dialog-top__down">
                         <div class="online-status on">Мы онлайн</div>
@@ -662,28 +686,26 @@ import '../assets/css/style.css'
                 await this.initUserId()
 
                 // Проверяем наличие или продолжение диалога
-                //this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : ''//await this.startDialog()
+                this.dialog_id && this.dialog_in_proccess ? await this.restoreDialog() : ''
 
                 if (!document.getElementById('app')) {
                     console.error('Элемент #app не найден');
                     return false;
                 }
 
+                console.log(this.dialog_state)
+
                 // Рендерим чат
-                document.querySelector('#app').innerHTML = this.renderChat();
+                document.querySelector('#app').innerHTML = await this.renderChat();
                 
                 // Вешаем события
                 this.attachEvents();
-
-                // Скроллим вниз после добавления всех сообщений
-                document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
 
                 // Добавляем кнопку, если надо
                 if (this.dialog_in_proccess && !document.querySelector('.finish-dialog')) {
                     document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
                 }
 
-                
                 // Прелоад картинки в конце чата
                 this.preloadImage (this.preloadImages, this.preloadImagesIndex)
 

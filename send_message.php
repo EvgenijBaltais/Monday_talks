@@ -27,9 +27,16 @@ if (!isset($data['fingerprint']) || empty($data['fingerprint'])) {
     exit;
 }
 
-if (!isset($data['message']) || empty(trim($data['message']))) {
+if (!isset($data['message']) || $data['message'] === null) {
     http_response_code(400);
     echo json_encode(['error' => 'Message is required']);
+    exit;
+}
+
+$trimmedMessage = trim($data['message']);
+if ($trimmedMessage === '' && $trimmedMessage !== '0') {
+    http_response_code(400);
+    echo json_encode(['error' => 'Message cannot be empty']);
     exit;
 }
 

@@ -187,7 +187,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   height: 70px;
-  padding: 15px 25px 15px 20px;
+  padding: 15px 20px;
   box-shadow: 0 0 12px 0 rgba(34, 60, 80, .2);
 }
 
@@ -517,6 +517,15 @@ svg {
   background: transparent; /* Прозрачный фон */
 }
 
+.close-chat {
+  width: 30px;
+  height: 30px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-image: url('../assets/images/dialog_icons/close.svg');
+  cursor: pointer;
+}
 
 .dialog-end-w {
   display: block;
@@ -607,8 +616,7 @@ svg {
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
-    /* Плавность для всех свойств */
-    transition: all 0s;
+    transition: all 0;
 }
 
 /* Делим 100% на 3 иконки = 33.33% на каждую */
