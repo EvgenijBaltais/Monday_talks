@@ -114,9 +114,18 @@ import '../assets/css/style.css'
 
                 const data = await response.json()
 
+                // Стандартные фразы
+                this.chat_start_phrases.forEach(item => {
+                    this.dialog_state.push(item)
+                })
+
                 if (data.messages.length) {
                     data.messages.forEach(item => {
-                        this.dialog_state.push({id: item.id, message: item.text, role: item.direction === 1 ? 'client' : 'manager'})
+                        this.dialog_state.push({
+                            id: item.id,
+                            message: item.text,
+                            role: item.direction === 1 ? 'client' : 'manager'
+                        })
                     })
                 }
 
@@ -221,11 +230,11 @@ import '../assets/css/style.css'
                 if (e.target.classList.contains('finish-dialog')) {
                     e.preventDefault();
                     
-                    this.endDialog (this.dialog_id).then(data => {
+                    this.endDialog (this.dialog_id).then(() => {
 
                         this.getParent(e.target, 'monday-dialog').querySelectorAll('.d-speech').forEach(item => item.remove())
 
-                        this.dialog_state = this.dialog_state.slice(0, 2);
+                        this.dialog_state = this.dialog_state.slice(0, this.chat_start_phrases.length);
 
                         this.getParent(e.target, 'monday-dialog').querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', `
                             <div class = "dialog-end-w">
@@ -355,10 +364,12 @@ import '../assets/css/style.css'
                 document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
             }
 
-           // String(message)
-            console.log(message.toString())
             // Добавляем в массив диалогов и на экран
-            this.dialog_state.push({id: 'new', role: is_admin ? 'manager' : 'client', message : message}), 
+            this.dialog_state.push({
+                id: 'new',
+                role: is_admin ? 'manager' : 'client',
+                message : message
+            }), 
 
             is_admin ?
                 document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.managerSpeech(message)) :
@@ -559,10 +570,12 @@ import '../assets/css/style.css'
         },
 
         async renderChat() {
-
-        this.chat_start_phrases.forEach(item => {
-            this.dialog_state.unshift(item)
-        })
+            
+            if (this.dialog_state.length === 0) {
+                this.chat_start_phrases.forEach(item => {
+                    this.dialog_state.push(item)
+                })
+            }
             
             return `
                 <div class = "dialog-chat-icon">
@@ -692,8 +705,6 @@ import '../assets/css/style.css'
                     console.error('Элемент #app не найден');
                     return false;
                 }
-
-                console.log(this.dialog_state)
 
                 // Рендерим чат
                 document.querySelector('#app').innerHTML = await this.renderChat();
