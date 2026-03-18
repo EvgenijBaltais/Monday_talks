@@ -58,7 +58,7 @@ try {
 		</p>
 		<?php foreach ($closed_dialogs as $dialog): ?>
 		    <a class="admin-dialog-item closed" data-fingerprint = "<?= htmlspecialchars($dialog['fingerprint']) ?>">
-		        <div>Новый диалог ID: <?= $dialog['id'] ?></div>
+		        <div>ID: <?= $dialog['id'] ?></div>
 		        <div>Создан: <?= $dialog['created_at'] ?></div>
 		        <div>Обновлен: <?= $dialog['updated_at'] ?></div>
 		    </a>
