@@ -2,6 +2,7 @@ import './assets/css/style.css'
 
 ;(function () {
 
+
     let Monday_talks_chat = {
 
         is_admin: false,
@@ -634,19 +635,21 @@ fastProcessMessages(messages) {
 
         async renderChat() {
             
-            if (this.dialog_state.length === 0) {
+            if (this.dialog_state.length === 0 && !this.is_admin) {
                 this.chat_start_phrases.forEach(item => {
                     this.dialog_state.push(item)
                 })
             }
             
             return `
-                <div class = "dialog-chat-icon">
-                    <div class = "icon icon-1"></div>
-                    <div class = "icon icon-2"></div>
-                    <div class = "icon icon-3"></div>
-                </div>    
-            <div class="monday-dialog">
+            ${!this.is_admin ? `
+            <div class = "dialog-chat-icon">
+                <div class = "icon icon-1"></div>
+                <div class = "icon icon-2"></div>
+                <div class = "icon icon-3"></div>
+            </div>` : ''}
+
+            <div class="monday-dialog ${this.is_admin ? ' isadmin' : ''}">
                 <div class="dialog-top">
                     <div class="dialog-top__up">
                         <div class="manager-icon" style="background-image: url('../src/assets/images/femalemanager.jpg')"></div>
@@ -679,7 +682,6 @@ fastProcessMessages(messages) {
                         <div class="enter-dop">
                             <div class="dialog-robot"></div>
                             <div class="dialog-smiles"></div>
-                            <div class="dialog-file"></div>
                         </div>
                     </form>
                 </div>

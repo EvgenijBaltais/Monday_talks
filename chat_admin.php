@@ -26,6 +26,7 @@ try {
         'error' => $e->getMessage()
     ]);
 }
+
 ?>
 
 
@@ -279,6 +280,6 @@ try {
     }
 }
 	</style>
-
+    <div id="app"></div>
 </body>
 </html>
