@@ -1,4 +1,5 @@
-// js/dialogs-tracker.js
+let openedDialogsLength = 0, closedDialogsLength = 0
+
 class DialogsTracker {
     constructor(options = {}) {
         this.apiUrl = options.apiUrl || '/api/dialogs.php';
@@ -90,7 +91,55 @@ const tracker = new DialogsTracker({
     onUpdate: (data) => {
         console.log('Opened dialogs:', data.openedDialogs);
         console.log('Closed dialogs:', data.closedDialogs);
-        
+
+        console.log(openedDialogsLength, data.openedDialogs.length)
+
+        let html = ''
+
+
+        if (openedDialogsLength !== data.openedDialogs.length) {
+
+            html = ''
+
+            if (document.querySelector('.admin-dialog.opened .phrases')) {
+
+                data.openedDialogs.forEach(item => {
+
+                    html += `
+                        <a class="admin-dialog-item opened" data-fingerprint = "${item.fingerprint}">
+                            <div>Новый диалог ID: ${item.id}</div>
+                            <div>Создан: ${item.created_at}</div>
+                            <div>Обновлен: ${item.updated_at}</div>
+                        </a>`
+                })
+
+                document.querySelector('.admin-dialog.opened .phrases').innerHTML = html
+            }
+        }
+
+        if (closedDialogsLength !== data.closedDialogs.length) {
+
+            html = ''
+
+            if (document.querySelector('.admin-dialog.closed .phrases')) {
+
+                data.closedDialogs.forEach(item => {console.log(item)
+                    
+                    html += `
+                        <a class="admin-dialog-item closed" data-fingerprint = "${item.fingerprint}">
+                            <div>Новый диалог ID: ${item.id}</div>
+                            <div>Создан: ${item.created_at}</div>
+                            <div>Обновлен: ${item.updated_at}</div>
+                        </a>`
+                })
+
+                document.querySelector('.admin-dialog.closed .phrases').innerHTML = html
+            }
+        }
+
+        openedDialogsLength = data.openedDialogs.length
+        closedDialogsLength = data.closedDialogs.length
+
         // Здесь вы можете обновлять ваш интерфейс
         // Например:
         // updateOpenedList(data.openedDialogs);

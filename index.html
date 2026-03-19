@@ -3,12 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/src/assets/css/admin.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@Monday_talks Chatbot</title>
   </head>
   <body>
 
+  <div class = "admin-dialog opened">
+    <p>
+      <b>Открытые диалоги:</b>
+    </p>
+        <div class="phrases">
+        </div>
+  </div>
+
+  <div class = "admin-dialog closed">
+    <p>
+      <b>Закрытые диалоги:</b>
+    </p>
+        <div class="phrases">
+
+        </div>
+  </div>
+
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
+    <script type="module" src = "/src/admin.js"></script>
   </body>
 </html>

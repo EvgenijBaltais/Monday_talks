@@ -27,6 +27,14 @@ export default defineConfig({
         target: 'http://mondaytalks',
         changeOrigin: true,
       },
+      '/api/dialogs.php': {
+        target: 'http://mondaytalks',
+        changeOrigin: true,
+      },
+      '/get_dialog_history.php': {
+        target: 'http://mondaytalks',
+        changeOrigin: true,
+      },
     }
   }
 })

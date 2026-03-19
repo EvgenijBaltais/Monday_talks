@@ -2,7 +2,9 @@
 // api/dialogs.php
 header('Content-Type: application/json');
 
-require_once '../config/database.php';
+require_once '../config.php';
+
+$pdo = getDB();
 
 class DialogsAPI {
     private $db;
