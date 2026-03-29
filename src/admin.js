@@ -2,7 +2,7 @@ let openedDialogsLength = 0, closedDialogsLength = 0
 
 class DialogsTracker {
     constructor(options = {}) {
-        this.apiUrl = options.apiUrl || '/api/dialogs.php';
+        this.apiUrl = options.apiUrl || '/php/api/dialogs.php';
         this.pollingInterval = options.pollingInterval || 3000;
         this.onUpdate = options.onUpdate || null;
         
@@ -86,7 +86,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // js/main.js
 const tracker = new DialogsTracker({
-    apiUrl: '/api/dialogs.php',
+    apiUrl: '/php/api/dialogs.php',
     pollingInterval: 3000,
     onUpdate: (data) => {
         console.log('Opened dialogs:', data.openedDialogs);
