@@ -1,4 +1,4 @@
-let openedDialogsLength = 0, closedDialogsLength = 0
+let openedDialogsLength = 0, closedDialogsLength = 0, html = ''
 
 class DialogsTracker {
     constructor(options = {}) {
@@ -91,11 +91,6 @@ const tracker = new DialogsTracker({
     onUpdate: (data) => {
         console.log('Opened dialogs:', data.openedDialogs);
         console.log('Closed dialogs:', data.closedDialogs);
-
-        console.log(openedDialogsLength, data.openedDialogs.length)
-
-        let html = ''
-
 
         if (openedDialogsLength !== data.openedDialogs.length) {
 
