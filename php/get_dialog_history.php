@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-require_once 'config.php';
+require_once 'config/config.php';
 
 // Получаем данные из тела запроса
 $input = json_decode(file_get_contents('php://input'), true);

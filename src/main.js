@@ -75,7 +75,7 @@ import './assets/css/style.css'
             const fingerprint = this.user_id
 
             try {
-                const response = await fetch ('start_dialog.php', {
+                const response = await fetch ('/php/start_dialog.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -107,7 +107,7 @@ import './assets/css/style.css'
             const fingerprint = this.user_id
 
             try {
-                const response = await fetch ('restore_dialog.php', {
+                const response = await fetch ('/php/restore_dialog.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -155,7 +155,7 @@ import './assets/css/style.css'
                 this.dialog_in_proccess = false
                 this.dialog_id = false
 
-                const response = await fetch ('end_dialog.php', {
+                const response = await fetch ('/php/end_dialog.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -394,7 +394,7 @@ import './assets/css/style.css'
                 // Определяем direction: 1 - от клиента, 2 - от менеджера
                 const direction = is_admin ? 2 : 1;
                 
-                const response = await fetch('/send_message.php', {
+                const response = await fetch('/php/send_message.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -491,7 +491,7 @@ longPoll() {
     var dialogId = this.dialogId;
     var lastId = this.lastMessageId || 0;
     
-    xhr.open('POST', 'poll_messages.php', true);
+    xhr.open('POST', '/php/poll_messages.php', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.timeout = 30000;
     

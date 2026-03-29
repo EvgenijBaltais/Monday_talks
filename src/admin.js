@@ -127,7 +127,7 @@ const tracker = new DialogsTracker({
                     
                     html += `
                         <a class="admin-dialog-item closed" data-fingerprint = "${item.fingerprint}">
-                            <div>Новый диалог ID: ${item.id}</div>
+                            <div>Диалог ID: ${item.id}</div>
                             <div>Создан: ${item.created_at}</div>
                             <div>Обновлен: ${item.updated_at}</div>
                         </a>`
