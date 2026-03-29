@@ -12,25 +12,14 @@ header('Cache-Control: no-cache, must-revalidate');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Функция для логирования
-function debug_log($message) {
-    $logFile = __DIR__ . '/poll_debug.log';
-    $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
-}
-
-debug_log("=== Начало запроса ===");
-
 // Обработка preflight запроса OPTIONS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    debug_log("OPTIONS запрос");
     http_response_code(200);
     exit;
 }
 
 // Только POST запросы
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    debug_log("Неверный метод: " . $_SERVER['REQUEST_METHOD']);
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed. Use POST']);
     exit;
@@ -38,12 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // Получаем JSON из тела запроса
 $rawInput = file_get_contents('php://input');
-debug_log("Raw input: " . $rawInput);
 
 $input = json_decode($rawInput, true);
 
 if (!$input) {
-    debug_log("Invalid JSON: " . json_last_error_msg());
     http_response_code(400);
     echo json_encode([
         'error' => 'Invalid JSON data',
@@ -52,25 +39,19 @@ if (!$input) {
     exit;
 }
 
-debug_log("Parsed input: " . print_r($input, true));
-
 // Получаем параметры из JSON
 $fingerprint = isset($input['user_id']) ? $input['user_id'] : '';
 $dialog_id = isset($input['dialog_id']) ? (int)$input['dialog_id'] : 0;
 // last_id ПОЛНОСТЬЮ УБРАН
 
-debug_log("Параметры: fingerprint=$fingerprint, dialog_id=$dialog_id");
-
 // Валидация
 if (empty($fingerprint)) {
-    debug_log("Missing user_id");
     http_response_code(400);
     echo json_encode(['error' => 'User ID is required']);
     exit;
 }
 
 if ($dialog_id <= 0) {
-    debug_log("Missing or invalid dialog_id");
     http_response_code(400);
     echo json_encode(['error' => 'Valid dialog_id is required']);
     exit;
@@ -81,10 +62,8 @@ try {
     if (!$pdo) {
         throw new Exception("Database connection failed");
     }
-    debug_log("Database connected successfully");
     
 } catch (Exception $e) {
-    debug_log("Database error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'error' => 'Database connection failed',
@@ -103,7 +82,6 @@ try {
     $dialog = $checkStmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$dialog) {
-        debug_log("Dialog not found or doesn't belong to user: $dialog_id, $fingerprint");
         echo json_encode([
             'success' => false,
             'error' => 'Dialog not found or access denied',
@@ -111,11 +89,9 @@ try {
         ]);
         exit;
     }
-    
-    debug_log("Диалог найден, статус: " . $dialog['status']);
-    
+
 } catch (PDOException $e) {
-    debug_log("Error checking dialog: " . $e->getMessage());
+
 }
 
 // Максимальное время polling (25 секунд)
@@ -148,8 +124,6 @@ while (time() - $startTime < $timeout) {
         
         $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        debug_log("Найдено " . count($messages) . " сообщений для dialog_id $dialog_id");
-        
         // Форматируем ответ - ВСЕГДА возвращаем все сообщения
         $response = [
             'success' => true,
@@ -170,12 +144,10 @@ while (time() - $startTime < $timeout) {
             'dialog_id' => $dialog_id
         ];
         
-        debug_log("Отправка ответа с " . count($messages) . " сообщениями");
         echo json_encode($response);
         exit;
         
     } catch (PDOException $e) {
-        debug_log("PDO Error: " . $e->getMessage());
         // При ошибке выходим с сообщением об ошибке
         echo json_encode([
             'success' => false,
@@ -187,7 +159,6 @@ while (time() - $startTime < $timeout) {
     
     // Проверяем, не закрыл ли клиент соединение
     if (connection_aborted()) {
-        debug_log("Connection aborted by client");
         exit;
     }
     
@@ -196,7 +167,6 @@ while (time() - $startTime < $timeout) {
 }
 
 // Таймаут - просто возвращаем пустой массив
-debug_log("Timeout для dialog_id $dialog_id");
 echo json_encode([
     'success' => true,
     'messages' => [],
