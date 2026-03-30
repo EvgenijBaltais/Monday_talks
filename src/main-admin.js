@@ -4,7 +4,7 @@ import './assets/css/style.css'
 
     let Monday_talks_chat = {
 
-        is_admin: false,
+        is_admin: true,
         managers_name: 'Вилора',
         clients_name: 'Клиент',
         managers_photo: 'femalemanager.jpg',
@@ -54,7 +54,7 @@ import './assets/css/style.css'
                 await this.startDialog ()
             }
 
-            this.sendMessage(messageText, this.dialog_id, this.is_admin)
+            this.sendMessage(messageText, this.dialog_id)
                 .then(data => {
                     if (data && data.success) {
                         console.log('Сообщение отправлено:', messageText);
@@ -367,7 +367,7 @@ import './assets/css/style.css'
 
         },
 
-        async sendMessage(message, dialog_id, is_admin) {
+        async sendMessage(message, dialog_id) {
 
             if (!document.querySelector('.finish-dialog')) {
                 document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
@@ -376,13 +376,11 @@ import './assets/css/style.css'
             // Добавляем в массив диалогов и на экран
             this.dialog_state.push({
                 id: 'new',
-                role: is_admin ? 'manager' : 'client',
+                role: 'manager',
                 message : message
             }), 
 
-            is_admin ?
-                document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.managerSpeech(message)) :
-                document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(message))
+            document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.managerSpeech(message))
 
             document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
 
@@ -390,10 +388,7 @@ import './assets/css/style.css'
             try {
                 // Используем сохраненный user_id
                 const fingerprint = this.user_id;
-                
-                // Определяем direction: 1 - от клиента, 2 - от менеджера
-                const direction = is_admin ? 2 : 1;
-                
+
                 const response = await fetch('/php/send_message.php', {
                     method: 'POST',
                     headers: {
@@ -403,8 +398,8 @@ import './assets/css/style.css'
                         fingerprint,
                         message,
                         dialog_id,
-                        direction,
-                        admin: is_admin ? 1 : 0
+                        direction: 2,
+                        admin: true
                     })
                 });
 
@@ -634,21 +629,9 @@ fastProcessMessages(messages) {
 
         async renderChat() {
             
-            if (this.dialog_state.length === 0 && !this.is_admin) {
-                this.chat_start_phrases.forEach(item => {
-                    this.dialog_state.push(item)
-                })
-            }
             
             return `
-            ${!this.is_admin ? `
-            <div class = "dialog-chat-icon">
-                <div class = "icon icon-1"></div>
-                <div class = "icon icon-2"></div>
-                <div class = "icon icon-3"></div>
-            </div>` : ''}
-
-            <div class="monday-dialog ${this.is_admin ? ' isadmin' : ''}">
+            <div class="monday-dialog isadmin">
                 <div class="dialog-top">
                     <div class="dialog-top__up">
                         <div class="manager-icon" style="background-image: url('../src/assets/images/femalemanager.jpg')"></div>

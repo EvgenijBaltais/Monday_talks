@@ -15,7 +15,22 @@ class DialogsAPI {
     
     public function getDialogs() {
         try {
-            $stmt = $this->db->query("SELECT id, fingerprint, status, UNIX_TIMESTAMP(created_at) as created_at, UNIX_TIMESTAMP(updated_at) as updated_at FROM dialogs ORDER BY created_at DESC");
+            // Получаем все диалоги с количеством сообщений и непрочитанными сообщениями
+            $stmt = $this->db->query("
+                SELECT 
+                    d.id, 
+                    d.fingerprint, 
+                    d.status, 
+                    UNIX_TIMESTAMP(d.created_at) as created_at, 
+                    UNIX_TIMESTAMP(d.updated_at) as updated_at,
+                    COUNT(cm.id) as message_count,
+                    SUM(CASE WHEN cm.is_read = 0 AND cm.direction = 1 THEN 1 ELSE 0 END) as unread_messages
+                FROM dialogs d
+                LEFT JOIN chat_messages cm ON d.id = cm.dialog_id
+                GROUP BY d.id
+                ORDER BY d.created_at DESC
+            ");
+            
             $dialogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             $result = [
@@ -24,10 +39,21 @@ class DialogsAPI {
             ];
             
             foreach ($dialogs as $dialog) {
+                // Формируем данные диалога
+                $dialogData = [
+                    'id' => $dialog['id'],
+                    'fingerprint' => $dialog['fingerprint'],
+                    'status' => $dialog['status'],
+                    'message_count' => (int)$dialog['message_count'],
+                    'unread_messages' => (int)$dialog['unread_messages'],
+                    'created_at' => $dialog['created_at'],
+                    'updated_at' => $dialog['updated_at']
+                ];
+                
                 if ($dialog['status'] === 'open') {
-                    $result['opened_dialogs'][] = $dialog;
+                    $result['opened_dialogs'][] = $dialogData;
                 } else {
-                    $result['closed_dialogs'][] = $dialog;
+                    $result['closed_dialogs'][] = $dialogData;
                 }
             }
             

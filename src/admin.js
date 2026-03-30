@@ -1,4 +1,7 @@
-let openedDialogsLength = 0, closedDialogsLength = 0, html = ''
+let openedDialogsLength = 0,
+    
+    closedDialogsLength = 0,
+    html = ''
 
 class DialogsTracker {
     constructor(options = {}) {
@@ -102,7 +105,7 @@ const tracker = new DialogsTracker({
 
                     html += `
                         <a class="admin-dialog-item opened" data-fingerprint = "${item.fingerprint}">
-                            <div>Новый диалог ID: ${item.id}</div>
+                            <div>Диалог ID: ${item.id}</div>
                             <div>Создан: ${item.created_at}</div>
                             <div>Обновлен: ${item.updated_at}</div>
                         </a>`

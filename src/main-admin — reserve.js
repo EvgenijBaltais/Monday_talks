@@ -4,6 +4,7 @@ import './assets/css/style.css'
 
     let Monday_talks_chat = {
 
+        is_admin: false,
         managers_name: 'Вилора',
         clients_name: 'Клиент',
         managers_photo: 'femalemanager.jpg',
@@ -53,7 +54,7 @@ import './assets/css/style.css'
                 await this.startDialog ()
             }
 
-            this.sendMessage(messageText, this.dialog_id)
+            this.sendMessage(messageText, this.dialog_id, this.is_admin)
                 .then(data => {
                     if (data && data.success) {
                         console.log('Сообщение отправлено:', messageText);
@@ -341,7 +342,7 @@ import './assets/css/style.css'
         async initUserId() {
             // Проверяем куки
             let userId = this.getCookie('user_id');
-
+            
             if (userId) {
                 // Если нашли в куки - используем
                 this.user_id = userId;
@@ -363,9 +364,10 @@ import './assets/css/style.css'
                 this.setCookie('user_id', userId, 3);
                 return userId;
             }
+
         },
 
-        async sendMessage(message, dialog_id) {
+        async sendMessage(message, dialog_id, is_admin) {
 
             if (!document.querySelector('.finish-dialog')) {
                 document.querySelector('.dialog-top__down').insertAdjacentHTML('beforeend', `<div class="finish-dialog">Завершить диалог</div>`)
@@ -374,17 +376,23 @@ import './assets/css/style.css'
             // Добавляем в массив диалогов и на экран
             this.dialog_state.push({
                 id: 'new',
-                role: 'client',
+                role: is_admin ? 'manager' : 'client',
                 message : message
             }), 
 
-            document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(message))
+            is_admin ?
+                document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.managerSpeech(message)) :
+                document.querySelector('.dialog-middle-w').insertAdjacentHTML('beforeend', this.clientSpeech(message))
+
             document.querySelector('.dialog-middle').scrollTop = document.querySelector('.dialog-middle-w').scrollHeight;
 
 
             try {
                 // Используем сохраненный user_id
                 const fingerprint = this.user_id;
+                
+                // Определяем direction: 1 - от клиента, 2 - от менеджера
+                const direction = is_admin ? 2 : 1;
                 
                 const response = await fetch('/php/send_message.php', {
                     method: 'POST',
@@ -395,8 +403,8 @@ import './assets/css/style.css'
                         fingerprint,
                         message,
                         dialog_id,
-                        direction: 1,
-                        admin: false
+                        direction,
+                        admin: is_admin ? 1 : 0
                     })
                 });
 
@@ -459,163 +467,188 @@ import './assets/css/style.css'
             }
         },
 
-        /* Новая версия */
+/* Новая версия */
 
-        startLongPolling() {
-            this.stopLongPolling();
-            
-            if (!this.dialog_id || !this.user_id) return;
-            
-            this.pollingActive = true;
-            this.dialogId = this.dialog_id;
-            
-            // Используем requestAnimationFrame для батчинга DOM операций
-            this.batchDOMUpdates = false;
-            
-            this.longPoll();
-        },
+startLongPolling() {
+    this.stopLongPolling();
+    
+    if (!this.dialog_id || !this.user_id) return;
+    
+    this.pollingActive = true;
+    this.dialogId = this.dialog_id;
+    
+    // Используем requestAnimationFrame для батчинга DOM операций
+    this.batchDOMUpdates = false;
+    
+    this.longPoll();
+},
 
-        longPoll() {
-            if (!this.pollingActive || this.dialog_id !== this.dialogId) return;
-            
-            var xhr = new XMLHttpRequest();
-            var self = this;
-            var dialogId = this.dialogId;
-            var lastId = this.lastMessageId || 0;
-            
-            xhr.open('POST', '/php/poll_messages.php', true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.timeout = 30000;
-            
-            xhr.onload = function() {
-                if (!self.pollingActive || self.dialog_id !== dialogId) return;
+longPoll() {
+    if (!this.pollingActive || this.dialog_id !== this.dialogId) return;
+    
+    var xhr = new XMLHttpRequest();
+    var self = this;
+    var dialogId = this.dialogId;
+    var lastId = this.lastMessageId || 0;
+    
+    xhr.open('POST', '/php/poll_messages.php', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 30000;
+    
+    xhr.onload = function() {
+        if (!self.pollingActive || self.dialog_id !== dialogId) return;
+        
+        if (xhr.status === 200) {
+            try {
+                var data = JSON.parse(xhr.responseText);
                 
-                if (xhr.status === 200) {
-                    try {
-                        var data = JSON.parse(xhr.responseText);
-                        
-                        if (data.error) {
-                            // Задержка 5 секунд при ошибке
-                            setTimeout(function() { self.longPoll(); }, 5000);
-                            return;
-                        }
-                        
-                        if (data.messages && data.messages.length) {
-                            self.fastProcessMessages(data.messages);
-                        }
-                        
-                        // ГЛАВНОЕ ИСПРАВЛЕНИЕ: задержка 1 секунда перед следующим запросом
-                        setTimeout(function() { self.longPoll(); }, 1000);
-                        
-                    } catch (e) {
-                        setTimeout(function() { self.longPoll(); }, 1000);
-                    }
-                } else {
+                if (data.error) {
                     setTimeout(function() { self.longPoll(); }, 5000);
+                    return;
                 }
-            };
-            
-            xhr.onerror = xhr.ontimeout = function() {
-                if (self.pollingActive && self.dialog_id === dialogId) {
-                    // Тоже добавляем задержку при ошибке/таймауте
-                    setTimeout(function() { self.longPoll(); }, 3000);
+                
+                if (data.messages && data.messages.length) {
+                    self.fastProcessMessages(data.messages);
                 }
-            };
-            
-            xhr.send(JSON.stringify({
-                user_id: this.user_id,
-                dialog_id: dialogId,
-                last_id: lastId
-            }));
-        },
+                
+                self.longPoll();
+                
+            } catch (e) {
+                setTimeout(function() { self.longPoll(); }, 1000);
+            }
+        } else {
+            setTimeout(function() { self.longPoll(); }, 5000);
+        }
+    };
+    
+    xhr.onerror = xhr.ontimeout = function() {
+        if (self.pollingActive && self.dialog_id === dialogId) {
+            self.longPoll();
+        }
+    };
+    
+    xhr.send(JSON.stringify({
+        user_id: this.user_id,
+        dialog_id: dialogId,
+        last_id: lastId
+    }));
+},
 
-        fastProcessMessages(messages) {
-            if (!messages || !messages.length) return;
+fastProcessMessages(messages) {
+    if (!messages || !messages.length) return;
+    
+    var container = document.querySelector('.dialog-middle-w');
+    var scrollContainer = document.querySelector('.dialog-middle');
+    var state = this.dialog_state;
+    var stateLen = state.length;
+    var lastId = this.lastMessageId || 0;
+    var htmlBuffer = [];
+    var shouldScroll = false;
+    
+    // Собираем существующие ID в Set (быстрее Map для простого поиска)
+    var existingIds = new Set();
+    for (var i = 0; i < stateLen; i++) {
+        var id = state[i].id;
+        if (id && id !== 'new' && id !== false) {
+            existingIds.add(id);
+        }
+    }
+    
+    // Один проход по новым сообщениям
+    for (var j = 0; j < messages.length; j++) {
+        var msg = messages[j];
+        
+        // Пропускаем существующие
+        if (existingIds.has(msg.id)) continue;
+        
+        // Обновляем lastId
+        if (msg.id > lastId) lastId = msg.id;
+        
+        // Создаем новое сообщение
+        var newMsg = {
+            id: msg.id,
+            role: msg.direction === 2 ? 'manager' : 'client',
+            message: msg.message
+        };
+        
+        // Добавляем в state (push быстрее индексации для конца массива)
+        state[state.length] = newMsg;
+        existingIds.add(msg.id);
+        
+        // Проверяем нужно ли рендерить
+        var shouldRender = (self.is_admin && msg.direction === 1) || 
+                          (!self.is_admin && msg.direction === 2);
+        
+        if (shouldRender && container) {
+            // Кешируем HTML шаблоны
+            var template = msg.direction === 1 ? 
+                this.clientSpeechCache : this.managerSpeechCache;
             
-            var container = document.querySelector('.dialog-middle-w');
-            var scrollContainer = document.querySelector('.dialog-middle');
-            var state = this.dialog_state;
-            var stateLen = state.length;
-            var lastId = this.lastMessageId || 0;
-            var htmlBuffer = [];
-            var shouldScroll = false;
-            
-            // Собираем существующие ID в Set (быстрее Map для простого поиска)
-            var existingIds = new Set();
-            for (var i = 0; i < stateLen; i++) {
-                var id = state[i].id;
-                if (id && id !== 'new' && id !== false) {
-                    existingIds.add(id);
+            if (!template) {
+                template = msg.direction === 1 ? 
+                    this.clientSpeech(msg.message) : 
+                    this.managerSpeech(msg.message);
+                
+                if (msg.direction === 1) {
+                    this.clientSpeechCache = template;
+                } else {
+                    this.managerSpeechCache = template;
                 }
             }
             
-            // Один проход по новым сообщениям
-            for (var j = 0; j < messages.length; j++) {
-                var msg = messages[j];
-                
-                // Пропускаем существующие
-                if (existingIds.has(msg.id)) continue;
-                
-                // Обновляем lastId
-                if (msg.id > lastId) lastId = msg.id;
-                
-                // Создаем новое сообщение
-                var newMsg = {
-                    id: msg.id,
-                    role: msg.direction === 2 ? 'manager' : 'client',
-                    message: msg.message
-                };
-                
-                // Добавляем в state (push быстрее индексации для конца массива)
-                state[state.length] = newMsg;
-                existingIds.add(msg.id);
+            htmlBuffer[htmlBuffer.length] = template;
+            shouldScroll = true;
+        }
+    }
+    
+    // Обновляем lastMessageId
+    if (lastId > (this.lastMessageId || 0)) {
+        this.lastMessageId = lastId;
+    }
+    
+    // Батчим DOM операции
+    if (htmlBuffer.length && container) {
+        // Используем DocumentFragment для минимизации reflow
+        var fragment = document.createDocumentFragment();
+        var tempDiv = document.createElement('div');
+        
+        for (var k = 0; k < htmlBuffer.length; k++) {
+            tempDiv.innerHTML = htmlBuffer[k];
+            while (tempDiv.firstChild) {
+                fragment.appendChild(tempDiv.firstChild);
             }
-            
-            // Обновляем lastMessageId
-            if (lastId > (this.lastMessageId || 0)) {
-                this.lastMessageId = lastId;
-            }
-            
-            // Батчим DOM операции
-            if (htmlBuffer.length && container) {
-                // Используем DocumentFragment для минимизации reflow
-                var fragment = document.createDocumentFragment();
-                var tempDiv = document.createElement('div');
-                
-                for (var k = 0; k < htmlBuffer.length; k++) {
-                    tempDiv.innerHTML = htmlBuffer[k];
-                    while (tempDiv.firstChild) {
-                        fragment.appendChild(tempDiv.firstChild);
-                    }
-                }
-                
-                container.appendChild(fragment);
-                
-                if (shouldScroll && scrollContainer) {
-                    // Используем requestAnimationFrame для синхронизации с отрисовкой
-                    requestAnimationFrame(function() {
-                        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-                    });
-                }
-            }
-        },
-        /* Новая версия, конец */
+        }
+        
+        container.appendChild(fragment);
+        
+        if (shouldScroll && scrollContainer) {
+            // Используем requestAnimationFrame для синхронизации с отрисовкой
+            requestAnimationFrame(function() {
+                scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            });
+        }
+    }
+},
+/* Новая версия, конец */
+
 
         async renderChat() {
             
-            if (this.dialog_state.length === 0) {
+            if (this.dialog_state.length === 0 && !this.is_admin) {
                 this.chat_start_phrases.forEach(item => {
                     this.dialog_state.push(item)
                 })
             }
             
             return `
+            ${!this.is_admin ? `
             <div class = "dialog-chat-icon">
                 <div class = "icon icon-1"></div>
                 <div class = "icon icon-2"></div>
                 <div class = "icon icon-3"></div>
-            </div>
-            <div class="monday-dialog">
+            </div>` : ''}
+
+            <div class="monday-dialog ${this.is_admin ? ' isadmin' : ''}">
                 <div class="dialog-top">
                     <div class="dialog-top__up">
                         <div class="manager-icon" style="background-image: url('../src/assets/images/femalemanager.jpg')"></div>
